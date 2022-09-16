@@ -13,9 +13,9 @@ class RosPackages():
         self.env = env
 
     def _get_ros_poetry_packages(self, path:Path):
-        package_xmls = glob(str(path / "**/package.xml"))
+        package_xmls = glob(str(path / "**/package.xml"), recursive=True)
         package_xml_dirs = [Path(item).parent for item in package_xmls]
-        pyproject_tomls = glob(str(path / "**/pyproject.toml"))
+        pyproject_tomls = glob(str(path / "**/pyproject.toml"), recursive=True)
         pyproject_toml_dirs = [Path(item).parent for item in pyproject_tomls]
 
         ros_poetry_packages = []
