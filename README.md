@@ -1,17 +1,13 @@
 # platform_cli
 
+A CLI for common scripts shared between Greenroom platform modules and platform CI
 
 ## Development
 
-* `pip install poetry`
-* `poetry install -E doc -E dev -E test`
-* `poetry run tox`
+`pip install -e .`
+`python -m platform_cli`
 
-## Features
+## Usage
 
-* TODO
-
-## Credits
-
-This package was created with [Cookiecutter](https://github.com/audreyr/cookiecutter) and the [waynerv/cookiecutter-pypackage](https://github.com/waynerv/cookiecutter-pypackage) project template.
-Check out the [tutorial](https://github.com/waynerv/cookiecutter-pypackage/blob/master/docs/tutorial.md)
+`pip install git+https://github.com/Greenroom-Robotics/platform_cli.git@main`
+`python -m platform_cli`
