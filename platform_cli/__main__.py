@@ -4,8 +4,8 @@ import click
 import os
 
 from platform_cli.helpers import check_env, Env
-from platform_cli.cli.ros_packages import RosPackages
-from platform_cli.cli.poetry_packages import PoetryPackages
+from platform_cli.ros_packages import RosPackages
+from platform_cli.poetry_packages import PoetryPackages
 
 
 @click.group(help=click.style("A CLI for common scripts shared between Greenroom platform modules and platform CI.", fg="green"))
