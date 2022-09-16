@@ -28,14 +28,14 @@ class RosPackages():
     def build(self):
         click.echo(click.style("Building all packages...", fg='green'))
         subprocess.call(
-            f"colcon build --install-base /opt/greenroom/{self.env['PACKAGE_MODULE']}",
+            f"colcon build --install-base /opt/greenroom/{self.env['PLATFORM_MODULE']}",
             shell=True,
         )
 
     def test(self):
         click.echo(click.style("Testing all packages...", fg='green'))
         subprocess.call(
-            f"colcon test --install-base /opt/greenroom/{self.env['PACKAGE_MODULE']}",
+            f"colcon test --install-base /opt/greenroom/{self.env['PLATFORM_MODULE']}",
             shell=True,
         )
 

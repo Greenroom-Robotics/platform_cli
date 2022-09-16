@@ -15,5 +15,5 @@ A CLI for common commands shared between Greenroom Platform Modules and Platform
 ### Requirements
 
 Please export the following environment variables:
-* `PACKAGE_MODULE` eg) `platform_perception`
+* `PLATFORM_MODULE` eg) `platform_perception`
 * `ROS_OVERLAY` eg) `/opt/ros/galactic`
