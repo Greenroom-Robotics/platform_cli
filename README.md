@@ -1,13 +1,19 @@
-# platform_cli
+# Platform CLI
 
-A CLI for common scripts shared between Greenroom platform modules and platform CI
+A CLI for common commands shared between Greenroom Platform Modules and Platform CI
 
 ## Development
 
-`pip install -e .`
-`python -m platform_cli`
+* `pip install -e .` to install in edit mode
+* `python -m platform_cli` to test it
 
 ## Usage
 
-`pip install git+https://github.com/Greenroom-Robotics/platform_cli.git@main`
-`python -m platform_cli`
+* `pip install git+https://github.com/Greenroom-Robotics/platform_cli.git@main` to install from a tag/branch
+* `python -m platform_cli` to use.
+
+### Requirements
+
+Please export the following environment variables:
+* `PACKAGE_MODULE` eg) `platform_perception`
+* `ROS_OVERLAY` eg) `/opt/ros/galactic`
