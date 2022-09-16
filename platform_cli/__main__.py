@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, cast
+from typing import cast
 import click
 import os
 
