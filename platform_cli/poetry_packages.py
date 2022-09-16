@@ -32,7 +32,7 @@ class PoetryPackages():
         non_ros_poetry_packages = self._get_non_ros_poetry_packages()
         for dir in non_ros_poetry_packages:
             click.echo(click.style(f"Installing {str(dir)}...", fg="blue"))
-            error = subprocess.call(f"cd {dir} && poetry install", shell=True)
+            error = subprocess.call(f"cd {dir} && poetry install", shell=True, executable='/bin/bash')
             if (error):
                 raise click.ClickException("Install failed")
         click.echo(click.style("Complete", fg="green"))
@@ -44,7 +44,7 @@ class PoetryPackages():
 
         for dir in non_ros_poetry_packages:
             click.echo(click.style(f"Running tests for {str(dir)}...", fg="blue"))
-            error = subprocess.call(f"cd {dir} && python3 -m pytest .", shell=True)
+            error = subprocess.call(f"cd {dir} && python3 -m pytest .", shell=True, executable='/bin/bash')
             if (error):
                 raise click.ClickException("Pytest failed")
 

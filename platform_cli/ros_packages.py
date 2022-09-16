@@ -30,6 +30,7 @@ class RosPackages():
         subprocess.call(
             f"colcon build --install-base /opt/greenroom/{self.env['PLATFORM_MODULE']}",
             shell=True,
+            executable='/bin/bash'
         )
 
     def test(self):
@@ -37,6 +38,7 @@ class RosPackages():
         subprocess.call(
             f"colcon test --install-base /opt/greenroom/{self.env['PLATFORM_MODULE']}",
             shell=True,
+            executable='/bin/bash'
         )
 
     def install_poetry_deps(self, base_path: Path):
@@ -44,6 +46,6 @@ class RosPackages():
         ros_poetry_packages = self._get_ros_poetry_packages(base_path)
         for dir in ros_poetry_packages:
             click.echo(click.style(f"Installing {str(dir)}...", fg="blue"))
-            error = subprocess.call(f"cd {dir} && poetry install", shell=True)
+            error = subprocess.call(f"cd {dir} && poetry install", shell=True, executable='/bin/bash')
             if (error):
                 raise click.ClickException("Install failed")
