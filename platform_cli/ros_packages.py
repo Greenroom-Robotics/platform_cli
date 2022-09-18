@@ -45,6 +45,9 @@ class RosPackages():
     def install_poetry_deps(self, base_path: Path):
         click.echo(click.style(f"Installing all poetry deps in {base_path} using pip", fg='green'))
         ros_poetry_packages = self._get_ros_poetry_packages(base_path)
+        # Disable venv
+        subprocess.call("config virtualenvs.create false", shell=True, executable='/bin/bash')
+        
         for dir in ros_poetry_packages:
             click.echo(click.style(f"Installing {str(dir)}...", fg="blue"))
             # export dependencies to a requirements.txt file without hashes to decrease time to resolve dependencies.
