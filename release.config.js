@@ -11,6 +11,14 @@ module.exports = {
             }
         ],
         "@semantic-release/github",
-        "@semantic-release/git"
+        [
+            "@semantic-release/git",
+            {
+              "assets": [
+                "CHANGELOG.md",
+                "./platform_cli/__init__.py"
+              ]
+            }
+          ]
     ],
 };
