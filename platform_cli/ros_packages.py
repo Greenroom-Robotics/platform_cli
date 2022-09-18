@@ -46,11 +46,11 @@ class RosPackages():
         click.echo(click.style(f"Installing all poetry deps in {base_path} using pip", fg='green'))
         ros_poetry_packages = self._get_ros_poetry_packages(base_path)
         # Disable venv
-        subprocess.call("config virtualenvs.create false", shell=True, executable='/bin/bash')
-        
+        subprocess.call("poetry config virtualenvs.create false", shell=True, executable='/bin/bash')
+
         for dir in ros_poetry_packages:
             click.echo(click.style(f"Installing {str(dir)}...", fg="blue"))
             # export dependencies to a requirements.txt file without hashes to decrease time to resolve dependencies.
-            error = subprocess.call(f"cd {dir} && poetry export --without-hashes --format=requirements.txt > requirements.txt && pip3 install -r requirements.txt", shell=True, executable='/bin/bash')
+            error = subprocess.call(f"cd {dir} && poetry export -f requirements.txt --output requirements.txt && pip3 install -r requirements.txt", shell=True, executable='/bin/bash')
             if (error):
                 raise click.ClickException("Install failed")
