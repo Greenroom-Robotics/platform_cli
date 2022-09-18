@@ -16,9 +16,6 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Docker Build
-        run: ./scripts/docker-build.sh
-
       - name: Release
         env:
           GITHUB_USER: ${{ github.actor }}
