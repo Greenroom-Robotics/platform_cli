@@ -51,6 +51,7 @@ class RosPackages():
         for dir in ros_poetry_packages:
             click.echo(click.style(f"Installing {str(dir)}...", fg="blue"))
             # export dependencies to a requirements.txt file without hashes to decrease time to resolve dependencies.
-            error = subprocess.call(f"cd {dir} && poetry export -f requirements.txt --output requirements.txt && pip3 install -r requirements.txt", shell=True, executable='/bin/bash')
+            # https://github.com/python-poetry/poetry-plugin-export/issues/78
+            error = subprocess.call(f"cd {dir} && poetry export -f requirements.txt --output requirements.txt && pip3 install -r requirements.txt && rm requirements.txt", shell=True, executable='/bin/bash')
             if (error):
                 raise click.ClickException("Install failed")
