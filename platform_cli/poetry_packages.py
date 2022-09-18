@@ -25,6 +25,7 @@ class PoetryPackages():
             if dir not in package_xml_dirs:
                 non_ros_poetry_packages.append(dir)
 
+        click.echo(click.style(f"{len(non_ros_poetry_packages)} package(s) found", fg='green'))
         return non_ros_poetry_packages
 
     def install(self):

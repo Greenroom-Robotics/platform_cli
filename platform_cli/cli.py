@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import cast
+from typing import List, cast
 import click
 import os
 
@@ -28,14 +28,18 @@ def ros():
     pass
 
 @ros.command(name="build")
-def ros_build():
+@click.argument("args", nargs=-1)
+def ros_build(args: List[str]):
     """Runs colcon build on all ros packages"""
-    ros_packages.build()
+    args_str = " ".join(args)
+    ros_packages.build(args_str)
 
 @ros.command(name="test")
-def ros_test():
+@click.argument("args", nargs=-1)
+def ros_test(args: List[str]):
     """Runs colcon test on all ros packages"""
-    ros_packages.test()
+    args_str = " ".join(args)
+    ros_packages.test(args_str)
 
 @ros.command(name="install_poetry_deps")
 @click.option('--base-path', type=str, help="The path to where the packages are installed")
@@ -49,7 +53,7 @@ poetry_packages = PoetryPackages(env)
 
 @cli.group(help="Commands for pure poetry packages")
 def poetry():
-    # check_env()
+    check_env()
     pass
 
 @poetry.command(name="install")

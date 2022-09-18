@@ -48,3 +48,13 @@ Commands:
   install  Runs poetry install on all poetry packages
   test     Runs pytest on all poetry packages
 ```
+
+### double-dash support
+
+Many commands support `--` in order to pipe args to the internal tools. For example,
+
+```bash
+platform ros build -- --help # will list colcon --help rather than the plaform cli's
+# or 
+platform ros build -- --packages-select some_package # to pass directly to colcon
+```
