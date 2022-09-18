@@ -45,7 +45,7 @@ def ros_test(args: List[str]):
 @click.option('--base-path', type=str, help="The path to where the packages are installed")
 def ros_install_poetry_deps(base_path: str):
     """Installs the poetry deps for any python packages"""
-    base_path_defaulted = Path(base_path) if base_path else Path.cwd() / "packages"
+    base_path_defaulted = Path(base_path) if base_path else Path(f"/opt/greenroom/{env['PLATFORM_MODULE']}")
     ros_packages.install_poetry_deps(base_path=base_path_defaulted)
 
 # Poetry packages
