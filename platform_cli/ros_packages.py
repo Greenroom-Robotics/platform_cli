@@ -28,19 +28,25 @@ class RosPackages():
 
     def build(self, args_str: str):
         click.echo(click.style("Building packages...", fg='green'))
-        subprocess.call(
+        error = subprocess.call(
             f"colcon build --merge-install --install-base /opt/greenroom/{self.env['PLATFORM_MODULE']} {args_str}",
             shell=True,
             executable='/bin/bash'
         )
+        if (error):
+            raise click.ClickException("Build failed")
+
 
     def test(self, args_str: str):
         click.echo(click.style("Testing packages...", fg='green'))
-        subprocess.call(
-            f"colcon test --merge-install --install-base /opt/greenroom/{self.env['PLATFORM_MODULE']} {args_str}; colcon test-result --verbose",
+        error = subprocess.call(
+            f"colcon test --merge-install --install-base /opt/greenroom/{self.env['PLATFORM_MODULE']} {args_str}; colcon test-result --all --verbose",
             shell=True,
             executable='/bin/bash'
         )
+        if (error):
+            raise click.ClickException("Test failed")
+
 
     def install_poetry_deps(self, base_path: Path):
         click.echo(click.style(f"Installing all poetry deps in {base_path} using pip", fg='green'))
