@@ -40,9 +40,13 @@ def get_project_root() -> Path:
     raise RuntimeError("Could not find project root.")
 
 
-def call(command: str, project_root_cwd=False, abort=True):
-    click.echo(click.style(f"Running: {command}", fg="blue"))
-    cwd = get_project_root() if project_root_cwd else None
+def call(command: str, cwd=None, project_root_cwd=False, abort=True):
+    if project_root_cwd and cwd:
+        raise RuntimeError("Both 'cwd' and 'project_root_cwd' set")
+
+    cwd = get_project_root() if project_root_cwd else cwd
+    
+    click.echo(click.style(f"Running: {click.style(command, bold=True)} in {click.style(cwd, bold=True)}", fg="blue"))
     error = subprocess.call(command, shell=True, executable="/bin/bash", cwd=cwd)
     if error and abort:
         raise click.ClickException("Failed")
