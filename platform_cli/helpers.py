@@ -13,6 +13,9 @@ def get_env() -> Env:
         raise click.ClickException("PLATFORM_MODULE environment variable must be set. eg) platform_perception")
     if "ROS_OVERLAY" not in os.environ:
         raise click.ClickException("ROS_OVERLAY environment variable must be set. eg) /opt/ros/galactic")
+    check_gr_auth()
+
+def check_gr_auth():
     if "GHCR_PAT" not in os.environ:
         raise click.ClickException("Personal access token not in environment variables! Aborting.")
 
@@ -37,17 +40,42 @@ def get_project_root() -> Path:
         else:
             p = p.parent
 
-    raise RuntimeError("Could not find project root.")
+    return None
 
 
-def call(command: str, cwd=None, project_root_cwd=False, abort=True):
+def stdout_call(command: str, cwd=None, project_root_cwd=False, abort=True) -> str:
     if project_root_cwd and cwd:
-        raise RuntimeError("Both 'cwd' and 'project_root_cwd' set")
+        raise RuntimeError("Both 'cwd' and 'project_root_cwd' are set")
 
-    cwd = get_project_root() if project_root_cwd else cwd
-    
-    click.echo(click.style(f"Running: {click.style(command, bold=True)} in {click.style(cwd, bold=True)}", fg="blue"))
-    error = subprocess.call(command, shell=True, executable="/bin/bash", cwd=cwd)
-    if error and abort:
-        raise click.ClickException("Failed")
+    if project_root_cwd:
+        cwd = get_project_root()
+        if cwd is None:
+            raise RuntimeError("Could not find project root.")
 
+    click.echo(click.style(f"Running: {click.style(command, bold=True)} in {click.style(str(cwd if cwd else Path.cwd()), bold=True)}", fg="blue"))
+    try:
+        proc = subprocess.run(command, shell=True, executable="/bin/bash", capture_output=True, cwd=cwd, check=abort)
+    except subprocess.CalledProcessError as e:
+        print(e)
+        raise click.ClickException("Run failed")
+
+    return proc.stdout.decode('ascii')
+
+
+def call(command: str, cwd=None, project_root_cwd=False, abort=True) -> subprocess.CompletedProcess:
+    if project_root_cwd and cwd:
+        raise RuntimeError("Both 'cwd' and 'project_root_cwd' are set")
+
+    if project_root_cwd:
+        cwd = get_project_root()
+        if cwd is None:
+            raise RuntimeError("Could not find project root.")
+
+    click.echo(click.style(f"Running: {click.style(command, bold=True)} in {click.style(str(cwd if cwd else Path.cwd()), bold=True)}", fg="blue"))
+    try:
+        proc = subprocess.run(command, shell=True, executable="/bin/bash", cwd=cwd, check=abort)
+    except subprocess.CalledProcessError as e:
+        print(e)
+        raise click.ClickException("Run failed")
+
+    return proc
