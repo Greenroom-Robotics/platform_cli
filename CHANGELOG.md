@@ -1,3 +1,12 @@
+## [1.0.1](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.0.0...v1.0.1) (2022-11-20)
+
+
+### Bug Fixes
+
+* add __init__.py to git asset list ([fde2453](https://github.com/Greenroom-Robotics/platform_cli/commit/fde24539e8e44e6d497306864f327b9b98949173))
+* add --without-hashes to fix https://github.com/python-poetry/poetry/issues/3472 ([93ca1ec](https://github.com/Greenroom-Robotics/platform_cli/commit/93ca1ecd0bc495ef4dfeb62b73e410763c8ae222))
+* raise errors on build and test ([05d148c](https://github.com/Greenroom-Robotics/platform_cli/commit/05d148c0f6837cf1c9b5183ffe233ffada5c23c8))
+
 ## 1.0.0 (2022-09-18)
 
 
