@@ -6,51 +6,44 @@ from platform_cli.groups.poetry import Poetry
 
 
 
-# This maintains a list of registerd plugin groups
-cli_groups: list[PlatformCliGroup] = [
+base_groups: list[PlatformCliGroup] = [
     Ros(),
     Poetry()
 ]
 
-def register_cli_group(group: PlatformCliGroup):
-    """Call this to register a cli_group"""
-    cli_groups.append(group)
+help = f"""
+{click.style('Greenroom Platform CLI', bg='green', bold=True)}
 
+{click.style('A CLI for common scripts shared between Greenroom platform modules and platform CI.', fg='green', bold=True)}
+"""
 
-def init_platform_cli():
+def init_platform_cli(help: str=help, extra_groups: list[PlatformCliGroup] = []):
     """
     This will initialise the platform_cli.
     A list of PlatformCliGroups can be passed in, these will also be initialised as cli_groups
    
     Example:
 
-    class ExampleGroup(PlatformCliGroup):
+    class SomeOtherGroup(PlatformCliGroup):
         def create(cli: click.group):
             @cli.group(help="Help for some other CLI group")
-            def some_example_group():
+            def some_other_group():
                 pass
 
-            @poetry.command(name="some_example_command")
-            def some_example_command():
+            @poetry.command(name="example")
+            def example():
                 pass
 
-    register_cli_group(ExampleGroup())
-    init_platform_cli()
-    ```
-
+    init_platform_cli(extra_groups=[SomeOtherGroup()])
     """
-    help_text = f"""
-    {click.style('Greenroom Platform CLI', bg='green', bold=True)}
+    groups = [*base_groups, *extra_groups]
 
-    {click.style('A CLI for common scripts shared between Greenroom platform modules and platform CI.', fg='green', bold=True)}
-    """
-
-    @click.group(help=help_text)
+    @click.group(help=help)
     def cli(): # type: ignore
         pass
 
     # Create all the groups
-    for group in cli_groups:
+    for group in groups:
         group.create(cli)
 
     cli()
