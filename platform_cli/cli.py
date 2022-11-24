@@ -1,70 +1,59 @@
-from pathlib import Path
-from typing import List, cast
 import click
-import os
 
-from platform_cli.helpers import check_env, Env
-from platform_cli.ros_packages import RosPackages
-from platform_cli.poetry_packages import PoetryPackages
+from platform_cli.groups.base import PlatformCliGroup
+from platform_cli.groups.ros import Ros
+from platform_cli.groups.poetry import Poetry
 
-env = cast(Env, os.environ)
 
-help_text = f"""
-{click.style('Greenroom Platform CLI', bg='green', bold=True)}
 
-{click.style('A CLI for common scripts shared between Greenroom platform modules and platform CI.', fg='green', bold=True)}
-"""
+# This maintains a list of registerd plugin groups
+cli_groups: list[PlatformCliGroup] = [
+    Ros(),
+    Poetry()
+]
 
-@click.group(help=help_text)
-def cli():
-    pass
+def register_cli_group(group: PlatformCliGroup):
+    """Call this to register a cli_group"""
+    cli_groups.append(group)
 
-# Colcon packages
-ros_packages = RosPackages(env)
 
-@cli.group(help="Commands for ROS packages")
-def ros():
-    check_env()
-    pass
+def init_platform_cli():
+    """
+    This will initialise the platform_cli.
+    A list of PlatformCliGroups can be passed in, these will also be initialised as cli_groups
+   
+    Example:
 
-@ros.command(name="build")
-@click.argument("args", nargs=-1)
-def ros_build(args: List[str]):
-    """Runs colcon build on all ros packages"""
-    args_str = " ".join(args)
-    ros_packages.build(args_str)
+    class ExampleGroup(PlatformCliGroup):
+        def create(cli: click.group):
+            @cli.group(help="Help for some other CLI group")
+            def some_example_group():
+                pass
 
-@ros.command(name="test")
-@click.argument("args", nargs=-1)
-def ros_test(args: List[str]):
-    """Runs colcon test on all ros packages"""
-    args_str = " ".join(args)
-    ros_packages.test(args_str)
+            @poetry.command(name="some_example_command")
+            def some_example_command():
+                pass
 
-@ros.command(name="install_poetry_deps")
-@click.option('--base-path', type=str, help="The path to where the packages are installed")
-def ros_install_poetry_deps(base_path: str):
-    """Installs the poetry deps for any python packages"""
-    base_path_defaulted = Path(base_path) if base_path else Path(f"/opt/greenroom/{env['PLATFORM_MODULE']}")
-    ros_packages.install_poetry_deps(base_path=base_path_defaulted)
+    register_cli_group(ExampleGroup())
+    init_platform_cli()
+    ```
 
-# Poetry packages
-poetry_packages = PoetryPackages(env)
+    """
+    help_text = f"""
+    {click.style('Greenroom Platform CLI', bg='green', bold=True)}
 
-@cli.group(help="Commands for pure poetry packages")
-def poetry():
-    check_env()
-    pass
+    {click.style('A CLI for common scripts shared between Greenroom platform modules and platform CI.', fg='green', bold=True)}
+    """
 
-@poetry.command(name="install")
-def poetry_install():
-    """Runs poetry install on all poetry packages"""
-    poetry_packages.install()
+    @click.group(help=help_text)
+    def cli(): # type: ignore
+        pass
 
-@poetry.command(name="test")
-def poetry_test():
-    """Runs pytest on all poetry packages"""
-    poetry_packages.test()
+    # Create all the groups
+    for group in cli_groups:
+        group.create(cli)
 
-if __name__ == '__main__':
     cli()
+    
+if __name__ == '__main__':
+    init_platform_cli()
