@@ -1,8 +1,8 @@
 import click
 
-from platform_cli.helpers import check_env, Env
-from platform_cli.ros_packages import RosPackages
-from platform_cli.poetry_packages import PoetryPackages
+from platform_cli.groups.base import PlatformCliGroup
+from platform_cli.groups.ros import Ros
+from platform_cli.groups.poetry import Poetry
 from platform_cli.packaging import Packaging
 
 

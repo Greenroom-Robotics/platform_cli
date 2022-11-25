@@ -4,16 +4,19 @@ import os
 from pathlib import Path
 import subprocess
 
+
 class Env(TypedDict):
     PLATFORM_MODULE: str
     ROS_OVERLAY: str
+
 
 def get_env() -> Env:
     if "PLATFORM_MODULE" not in os.environ:
         raise click.ClickException("PLATFORM_MODULE environment variable must be set. eg) platform_perception")
     if "ROS_OVERLAY" not in os.environ:
-        raise click.ClickException("ROS_OVERLAY environment variable must be set. eg) /opt/ros/galactic")
+        raise click.ClickException("ROS_OVERLAY environment variable must be set. eg) /opt/ros/humble")
     check_gr_auth()
+
 
 def check_gr_auth():
     if "GHCR_PAT" not in os.environ:
@@ -21,12 +24,9 @@ def check_gr_auth():
 
     return cast(Env, os.environ)
 
+
 def echo(msg: str, color: str):
     click.echo(click.style(msg, fg=color)) # type: ignore
-
-class Env(TypedDict):
-    PLATFORM_MODULE: str
-    ROS_OVERLAY: str
 
 
 def get_project_root() -> Path:
