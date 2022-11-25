@@ -1,7 +1,7 @@
 from typing import TypedDict, cast
 import click
 import os
-
+import subprocess
 class Env(TypedDict):
     PLATFORM_MODULE: str
     ROS_OVERLAY: str
@@ -16,3 +16,12 @@ def get_env() -> Env:
 
 def echo(msg: str, color: str):
     click.echo(click.style(msg, fg=color)) # type: ignore
+
+def call(command: str):
+    error = subprocess.call(
+        command,
+        shell=True,
+        executable='/bin/bash'
+    )
+    if (error):
+        raise click.ClickException(click.style(f"Command failed: {command}", fg="red"))

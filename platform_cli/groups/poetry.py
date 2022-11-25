@@ -1,10 +1,9 @@
-import subprocess
 from glob import glob
 from pathlib import Path
 import click
 
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import echo
+from platform_cli.helpers import echo, call
 
 default_path = Path.cwd() / "packages"
 
@@ -36,9 +35,8 @@ class Poetry(PlatformCliGroup):
             non_ros_poetry_packages = self._get_non_ros_poetry_packages()
             for dir in non_ros_poetry_packages:
                 echo(f"Installing {str(dir)}...", "blue")
-                error = subprocess.call(f"cd {dir} && poetry install", shell=True, executable='/bin/bash')
-                if (error):
-                    raise click.ClickException("Install failed")
+                call(f"cd {dir} && poetry install")
+    
             echo("Complete", "green")
 
         @poetry.command(name="test")
@@ -51,8 +49,6 @@ class Poetry(PlatformCliGroup):
 
             for dir in non_ros_poetry_packages:
                 echo(f"Running tests for {str(dir)}...", "blue")
-                error = subprocess.call(f"cd {dir} && python3 -m pytest .", shell=True, executable='/bin/bash')
-                if (error):
-                    raise click.ClickException("Pytest failed")
+                call(f"cd {dir} && python3 -m pytest .")
 
             echo("Complete", "green")
