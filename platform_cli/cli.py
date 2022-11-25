@@ -3,7 +3,7 @@ import click
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.groups.ros import Ros
 from platform_cli.groups.poetry import Poetry
-from platform_cli.packaging import Packaging
+from platform_cli.groups.packaging import Packaging
 
 
 

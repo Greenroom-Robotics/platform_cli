@@ -1,35 +1,39 @@
-from typing import TypedDict, cast
+from typing import TypedDict, cast, Optional
 import click
 import os
 from pathlib import Path
 import subprocess
 
 
-class Env(TypedDict):
+class RosEnv(TypedDict):
     PLATFORM_MODULE: str
     ROS_OVERLAY: str
 
+class PkgEnv(TypedDict):
+    GHCR_PAT: str
 
-def get_env() -> Env:
+
+def get_ros_env() -> RosEnv:
     if "PLATFORM_MODULE" not in os.environ:
         raise click.ClickException("PLATFORM_MODULE environment variable must be set. eg) platform_perception")
     if "ROS_OVERLAY" not in os.environ:
         raise click.ClickException("ROS_OVERLAY environment variable must be set. eg) /opt/ros/humble")
-    check_gr_auth()
+    
+    return cast(RosEnv, os.environ)
 
 
-def check_gr_auth():
+def get_pkg_env() -> PkgEnv:
     if "GHCR_PAT" not in os.environ:
         raise click.ClickException("Personal access token not in environment variables! Aborting.")
 
-    return cast(Env, os.environ)
+    return cast(PkgEnv, os.environ)
 
 
 def echo(msg: str, color: str):
     click.echo(click.style(msg, fg=color)) # type: ignore
 
 
-def get_project_root() -> Path:
+def get_project_root() -> Optional[Path]:
     # not sure of a great way to find the project root, find the first .git directory?
 
     p = Path.cwd()
@@ -43,7 +47,7 @@ def get_project_root() -> Path:
     return None
 
 
-def stdout_call(command: str, cwd=None, project_root_cwd=False, abort=True) -> str:
+def stdout_call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=False, abort: bool=True) -> str:
     if project_root_cwd and cwd:
         raise RuntimeError("Both 'cwd' and 'project_root_cwd' are set")
 
@@ -62,7 +66,7 @@ def stdout_call(command: str, cwd=None, project_root_cwd=False, abort=True) -> s
     return proc.stdout.decode('ascii')
 
 
-def call(command: str, cwd=None, project_root_cwd=False, abort=True) -> subprocess.CompletedProcess:
+def call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=False, abort: bool=True, sudo: bool=False):
     if project_root_cwd and cwd:
         raise RuntimeError("Both 'cwd' and 'project_root_cwd' are set")
 
@@ -71,6 +75,9 @@ def call(command: str, cwd=None, project_root_cwd=False, abort=True) -> subproce
         if cwd is None:
             raise RuntimeError("Could not find project root.")
 
+    if sudo:
+        command = "sudo " + command
+        
     click.echo(click.style(f"Running: {click.style(command, bold=True)} in {click.style(str(cwd if cwd else Path.cwd()), bold=True)}", fg="blue"))
     try:
         proc = subprocess.run(command, shell=True, executable="/bin/bash", cwd=cwd, check=abort)
