@@ -5,7 +5,7 @@ import click
 import subprocess
 
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import get_env, echo
+from platform_cli.helpers import get_ros_env, echo
 
 class Ros(PlatformCliGroup):
     def _get_ros_poetry_packages(self, path:Path) -> List[Path]:
@@ -32,7 +32,7 @@ class Ros(PlatformCliGroup):
         def build(args: List[str]): # type: ignore
             """Runs colcon build on all ros package"""
 
-            env = get_env()
+            env = get_ros_env()
             args_str = " ".join(args)
 
             echo("Building packages...", 'green')
@@ -49,7 +49,7 @@ class Ros(PlatformCliGroup):
         def test(args: List[str]): # type: ignore
             """Runs colcon test on all ros packages"""
 
-            env = get_env()
+            env = get_ros_env()
             args_str = " ".join(args)
 
             echo("Testing packages...", 'green')
@@ -66,7 +66,7 @@ class Ros(PlatformCliGroup):
         def install_poetry_deps(base_path: Path): # type: ignore
             """Installs the poetry deps for any python packages"""
 
-            env = get_env()
+            env = get_ros_env()
             base_path = Path(base_path) if base_path else Path(f"/opt/greenroom/{env['PLATFORM_MODULE']}")
 
 

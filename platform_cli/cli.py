@@ -3,19 +3,20 @@ import click
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.groups.ros import Ros
 from platform_cli.groups.poetry import Poetry
+from platform_cli.groups.packaging import Packaging
 
 
 
 base_groups: list[PlatformCliGroup] = [
     Ros(),
-    Poetry()
+    Poetry(),
+    Packaging(),
 ]
 
 help = f"""
-{click.style('Greenroom Platform CLI', bg='green', bold=True)}
+{click.style('Greenroom Platform CLI', bg='green', fg='black', bold=True)}
 
-{click.style('A CLI for common scripts shared between Greenroom platform modules and platform CI.', fg='green', bold=True)}
-"""
+{click.style('A CLI for common scripts shared between Greenroom platform modules and platform CI.', fg='green', bold=True)}"""
 
 def init_platform_cli(help: str=help, extra_groups: list[PlatformCliGroup] = []):
     """
