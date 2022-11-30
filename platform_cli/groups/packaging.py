@@ -27,7 +27,7 @@ def parse_version(version: str):
     version_split = version.split("-")
     version_semver = version_split[0]
     version_prerelease = version_split[1] if len(version_split) == 2 else ""
-    if (len(version_semver.split(".")) is not 3):
+    if (len(version_semver.split(".")) != 3):
         raise ValueError("Version should be of the form 1.2.3 or 1.2.3-alpha1")
         
     return version_semver, version_prerelease
@@ -80,30 +80,30 @@ class Packaging(PlatformCliGroup):
                 raise click.ClickException("No '.repos' file found. Unsure how to obtain sources.")
 
         @pkg.command(name="build")
-        @click.option('--version', type=str, help="The version to call the debian", required=True)
+        @click.option('--version', type=str, help="The version to call the debian", default=None)
         @click.option('--no-tests', type=bool, default=True)
         def build(version: str, no_tests: bool): # type: ignore reportUnusedFunction
             """Builds the package using bloom"""
-
-
-            version_semver, version_prerelease = parse_version(version)
-            echo(f"Updating package.xml version to {version_semver}", "blue")
-            # This will replace anything between the <version></version> tags in the package.xml
-            call(f'sed -i \":a;N;\\$!ba; s|<version>.*<\\/version>|<version>{version_semver}<\\/version>|g" package.xml')
 
             pkg_name = Path.cwd().name
             pkg_type = "rosdebian"
             src_dir = Path("src")
             bloom_args = ''
 
+            if version is not None:
+                version_semver, version_prerelease = parse_version(version)
+                echo(f"Updating package.xml version to {version_semver}", "blue")
+                # This will replace anything between the <version></version> tags in the package.xml
+                call(f'sed -i \":a;N;\\$!ba; s|<version>.*<\\/version>|<version>{version_semver}<\\/version>|g" package.xml')
+
+                if version_prerelease:
+                    bloom_args += f'-i "{version_prerelease}"'
+
             # need to make this more generic
             if src_dir.is_dir():
                 pkgs = find_packages(src_dir)
                 if pkgs:
                     bloom_args += f' --src-dir={src_dir / pkgs[pkg_name]}'
-
-            if version_prerelease:
-                bloom_args += f'-i "{version_prerelease}"'
 
             if no_tests:
                 bloom_args += "--no-tests"
