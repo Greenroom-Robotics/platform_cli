@@ -1,6 +1,7 @@
 import subprocess
 from glob import glob
 from pathlib import Path
+from typing import List
 import click
 
 from platform_cli.groups.base import PlatformCliGroup
@@ -15,7 +16,7 @@ class Poetry(PlatformCliGroup):
         pyproject_tomls = glob(str(path / "**/pyproject.toml"), recursive=True)
         pyproject_toml_dirs = [Path(item).parent for item in pyproject_tomls]
 
-        non_ros_poetry_packages: list[Path] = []
+        non_ros_poetry_packages: List[Path] = []
         for dir in pyproject_toml_dirs:
             if dir not in package_xml_dirs:
                 non_ros_poetry_packages.append(dir)

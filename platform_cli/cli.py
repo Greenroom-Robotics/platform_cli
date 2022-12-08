@@ -21,7 +21,7 @@ help = f"""
 
 {click.style('A CLI for common scripts shared between Greenroom platform modules and platform CI.', fg='green', bold=True)}"""
 
-def init_platform_cli(help: str=help, extra_groups: list[PlatformCliGroup] = []):
+def init_platform_cli(help: str=help, extra_groups: List[PlatformCliGroup] = []):
     """
     This will initialise the platform_cli.
     A list of PlatformCliGroups can be passed in, these will also be initialised as cli_groups
