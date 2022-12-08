@@ -1,5 +1,6 @@
 import click
 
+from typing import List
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.groups.ros import Ros
 from platform_cli.groups.poetry import Poetry
@@ -7,7 +8,7 @@ from platform_cli.groups.packaging import Packaging
 
 
 
-base_groups: list[PlatformCliGroup] = [
+base_groups: List[PlatformCliGroup] = [
     Ros(),
     Poetry(),
     Packaging(),
