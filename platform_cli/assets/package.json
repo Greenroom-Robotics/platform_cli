@@ -1,0 +1,32 @@
+{
+    "name": "platform_cli",
+    "description": "Used by platform_cli to install the deps required to release a platform package",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "release": "multi-semantic-release"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/greenroom-robotics/platform_cli.git"
+    },
+    "author": "Greenroom Robotics Team <team@greenroomrobotics.com.au>",
+    "license": "UNLICENSED",
+    "bugs": {
+        "url": "https://github.com/greenroom-robotics/platform_cli/issues"
+    },
+    "workspaces": [
+        "packages/*"
+    ],
+    "homepage": "https://github.com/greenroom-robotics/platform_cli#readme",
+    "devDependencies": {
+        "@semantic-release/changelog": "^6.0.1",
+        "@semantic-release/commit-analyzer": "^9.0.2",
+        "@semantic-release/git": "^10.0.1",
+        "@semantic-release/release-notes-generator": "^10.0.3",
+        "conventional-changelog-conventionalcommits": "^5.0.0",
+        "semantic-release": "^19.0.3",
+        "@qiwi/multi-semantic-release": "^6.5.1",
+        "@semantic-release/exec": "^6.0.3"
+    }
+}

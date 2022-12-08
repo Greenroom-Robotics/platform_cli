@@ -5,6 +5,7 @@ from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.groups.ros import Ros
 from platform_cli.groups.poetry import Poetry
 from platform_cli.groups.packaging import Packaging
+from platform_cli.groups.release import Release
 
 
 
@@ -12,6 +13,7 @@ base_groups: List[PlatformCliGroup] = [
     Ros(),
     Poetry(),
     Packaging(),
+    Release(),
 ]
 
 help = f"""
