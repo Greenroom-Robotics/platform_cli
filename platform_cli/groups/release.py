@@ -47,11 +47,11 @@ class Release(PlatformCliGroup):
             
             dest_path_package_json = Path.cwd() / "package.json"
             dest_path_yarn_lock = Path.cwd() / "yarn.lock"
-            dest_path_yarn_lock = Path.cwd() / "release.config.js"
+            dest_path_release_config = Path.cwd() / "release.config.js"
 
             shutil.copyfile(asset_dir / "package.json", dest_path_package_json)
             shutil.copyfile(asset_dir / "yarn.lock", dest_path_yarn_lock)
-            shutil.copyfile(asset_dir / "release.config.js", dest_path_yarn_lock)
+            shutil.copyfile(asset_dir / "release.config.js", dest_path_release_config)
 
             call("yarn install --frozen-lockfile")
             
