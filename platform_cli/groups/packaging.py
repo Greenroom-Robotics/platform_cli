@@ -81,8 +81,9 @@ class Packaging(PlatformCliGroup):
 
         @pkg.command(name="build")
         @click.option('--version', type=str, help="The version to call the debian", default=None)
+        @click.option('--output', type=str, default="debs", help="The output directory for the debs")
         @click.option('--no-tests', type=bool, default=True)
-        def build(version: str, no_tests: bool): # type: ignore reportUnusedFunction
+        def build(version: str, output: str, no_tests: bool): # type: ignore reportUnusedFunction
             """Builds the package using bloom"""
 
             pkg_name = Path.cwd().name
@@ -113,11 +114,14 @@ class Packaging(PlatformCliGroup):
             cpus = cpu_count() if cpu_count() else 1
             call(f"fakeroot debian/rules binary -j{cpus}")
 
-            # move deb files
+            # the .deb and .ddeb files are in the parent directory
+            # move .deb/.ddeb files into the output folder
+            os.makedirs(output, exist_ok=True)
             debs = get_debs(Path.cwd().parent)
+            echo(f"Moving {len(debs)} .deb / .ddeb files to {output}", "blue")
             if debs:
                 for d in debs:
-                    shutil.move(str(d), str(Path.cwd()))
+                    shutil.move(str(d), output)
             else:
                 raise click.ClickException("No debs found.")
 
