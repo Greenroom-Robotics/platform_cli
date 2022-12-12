@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "release": "multi-semantic-release"
+        "multi-semantic-release": "multi-semantic-release"
     },
     "repository": {
         "type": "git",

@@ -125,6 +125,9 @@ class Packaging(PlatformCliGroup):
             else:
                 raise click.ClickException("No debs found.")
 
+            # remove the debian folder because it will prevent the next build
+            os.remove("debian")
+
             echo("Build complete", "green")
 
         @pkg.command(name="apt-clone")

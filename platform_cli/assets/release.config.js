@@ -23,8 +23,8 @@ module.exports = {
         [
             "@semantic-release/exec",
             {
-                "prepareCmd": "platform pkg build --version ${nextRelease.version}",
-                "publishCmd": "platform pkg apt-clone && platform pkg apt-add && platform pkg apt-push"
+                "prepareCmd": "platform release deb-prepare --version ${nextRelease.version}",
+                "publishCmd": "platform release deb-publish"
             }
         ],
         [
