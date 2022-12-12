@@ -7,6 +7,8 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 import json
 from dataclasses import dataclass
+from python_on_whales import docker
+from python_on_whales.components.buildx.imagetools.models import ImageVariantManifest
 
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.helpers import echo, call
@@ -95,22 +97,54 @@ class Release(PlatformCliGroup):
 
             package_info = self._get_package_info()
 
-            echo(f"Preparing release:", "blue")
-            echo(f"package_name: {package_info.package_name}", "blue")
-            echo(f"platform_module_name: {package_info.platform_module_name}", "blue")
-            echo(f"version: {version}", "blue")
+            # Install binfmt support for arm64
+            call("docker run --privileged --rm tonistiigi/binfmt --install all")
 
+            # Configure docker to use the platform buildx builder
+            try:
+                call("docker buildx create --name platform --driver docker-container --bootstrap")
+            except: 
+                echo("docker buildx already exists", "blue")
+            call("docker buildx use platform")
+
+            # Build the images for arm and amd using buildx
+            docker_image_name = f"ghcr.io/greenroom-robotics/{package_info.platform_module_name}:latest"
+            docker_build_command = [
+                "docker buildx build", 
+                "--platform linux/amd64,linux/arm64",
+                "--build-arg API_TOKEN_GITHUB",
+                f"-t {docker_image_name}", 
+                "--push", # it seems like we need to push this to a registry :(
+                "../../",
+            ]
+            call(" ".join(docker_build_command))
+            
+            # Inspect the image to get the manifest
+            image_manifests = docker.buildx.imagetools.inspect(docker_image_name)
+            # Find the arm64 and amd64 images as we need their digest
+            def is_arm64_image(item: ImageVariantManifest):
+                return item.platform and item.platform.architecture == "arm64"
+            def is_amd64_image(item: ImageVariantManifest):
+                return item.platform and item.platform.architecture == "amd64"
+            manifests = image_manifests.manifests or []
+            image_arm64 = next(manifest for manifest in manifests if is_arm64_image(manifest))
+            image_amd64 = next(manifest for manifest in manifests if is_amd64_image(manifest))
+    
             # We run the build command in a docker container
             # The volume is mounted so we have access to the created deb file
-            command = [
-                "docker run",
-                f"-v '{package_info.platform_module_path}:/home/ros/{package_info.platform_module_name}'",
-                f"-w '/home/ros/{package_info.platform_module_name}/{PACKAGES_DIRECTORY}/{package_info.package_name}'",
-                "ghcr.io/greenroom-robotics/platform_notifications",
-                "/bin/bash -c",
-                f"'source ~/.profile && platform pkg build --version {version} --output {DEBS_DIRECTORY}'",
-            ]
-            call(" ".join(command))
+            def build_deb(platform: str, digest: str):
+                return docker.run(
+                    f"{docker_image_name}@{digest}", 
+                    [f"/bin/bash -c 'source /home/ros/.profile && platform pkg build --version {version} --output {DEBS_DIRECTORY}'"],
+                    workdir=f'/home/ros/{package_info.platform_module_name}/{PACKAGES_DIRECTORY}/{package_info.package_name}',
+                    volumes=[
+                        (package_info.platform_module_path, f"/home/ros/{package_info.platform_module_name}",)
+                    ],
+                    platform=platform,
+                )
+
+            build_deb("linux/amd64", image_amd64.digest)
+            build_deb("linux/arm64", image_arm64.digest)
 
         @release.command(name="deb-publish")
         def deb_publish(): # type: ignore
@@ -125,5 +159,4 @@ class Release(PlatformCliGroup):
 
             call("platform pkg apt-add", cwd=Path(debs_folder))
             call("platform pkg apt-push") 
-
 
