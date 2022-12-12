@@ -30,7 +30,7 @@ Releases are done using [semantic-release](https://github.com/semantic-release/s
    1. Analysing the commits using `conventionalcommits` to figure out what the next version should be
    2. Generating releases notes for each package based on the commits
    3. Generating a changelog for each package based in the commits
-   4. Running `platform release deb-prepare` which builds the `.deb` in a docker container. Internally this will use `platform pkg build` to build the `.deb` file and then a docker volume to mount the resultant `.deb` back to the host machine.
-   5. Running `platform release deb-publish` to publish the `.deb` to the apt repo
+   4. Running [`platform release deb-prepare`](../platform_cli/groups/release.py#:~:text=def deb_prepare) which builds the `.deb` in a docker container. Internally this will use [`platform pkg build`](../platform_cli/groups/packaging.py#:~:text=def build) to build the `.deb` file and then a docker volume to mount the resultant `.deb` back to the host machine.
+   5. Running [`platform release deb-publish`](../platform_cli/groups/release.py#:~:text=def deb_publish) to publish the `.deb` to the apt repo
    6. Uploading the `.deb` to the github release
    7. Commiting back the changes to the `CHANGELOG.md` files
