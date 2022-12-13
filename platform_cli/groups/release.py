@@ -16,6 +16,7 @@ from platform_cli.helpers import echo, call
 
 PACKAGES_DIRECTORY = "packages"
 DEBS_DIRECTORY = "debs"
+DOCKER_REGISTRY = "localhost:5000"
 
 
 @dataclass
@@ -161,16 +162,22 @@ class Release(PlatformCliGroup):
                 raise Exception(f"API_TOKEN_GITHUB must be set")
 
             package_info = self._get_package_info()
-            docker_image_name = f"ghcr.io/greenroom-robotics/{package_info.platform_module_name}:latest"
+            docker_image_name = f"{DOCKER_REGISTRY}/{package_info.platform_module_name}:latest"
 
             # Install binfmt support for arm64
             docker.run("tonistiigi/binfmt", privileged=True, remove=True)
 
-            # Configure docker to use the platform buildx builder
+            # Start a local registry on port 5000
             try:
-                # call("docker buildx create --name platform --driver docker-container --bootstrap")
+                docker.run("registry:2", publish=[(5000, 5000)], detach=True, name="registry")
+            except:
+                echo("Local registry already running", "yellow")
+
+            try:
+                # Configure docker to use the platform buildx builder
+                # Network host is required for the local registry to work
                 docker.buildx.create(
-                    name="platform", driver="docker-container")
+                    name="platform", driver="docker-container", use=True, driver_options={"network": "host"})
             except:
                 echo("docker buildx environment already exists", "yellow")
                 echo("Consider running `docker buildx rm platform` if you want to reset the build environment", "yellow")
@@ -189,7 +196,10 @@ class Release(PlatformCliGroup):
                 tags=[docker_image_name],
                 build_args={
                     "API_TOKEN_GITHUB": os.environ["API_TOKEN_GITHUB"],
-                }
+                },
+                output={
+                    "type": "registry"
+                },
             )
      
             # Inspect the image to get the manifest
@@ -198,16 +208,18 @@ class Release(PlatformCliGroup):
 
             for architecture in arch:
                 echo(f"Building .deb for {architecture}", "blue")
-                output = self._build_deb_in_docker(
-                    version=version,
-                    platform_module_name=package_info.platform_module_name,
-                    platform_module_path=package_info.platform_module_path,
-                    package_name=package_info.package_name,
-                    docker_image_name=docker_image_name,
-                    architecture=architecture,
-                    image_manifests=image_manifests,
-                )
-                print(output)
+                try:
+                    self._build_deb_in_docker(
+                        version=version,
+                        platform_module_name=package_info.platform_module_name,
+                        platform_module_path=package_info.platform_module_path,
+                        package_name=package_info.package_name,
+                        docker_image_name=docker_image_name,
+                        architecture=architecture,
+                        image_manifests=image_manifests,
+                    )
+                except:
+                    echo(f"Failed to build .deb for {architecture}", "red")
 
         @release.command(name="deb-publish")
         def deb_publish():  # type: ignore

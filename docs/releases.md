@@ -30,7 +30,11 @@ Releases are done using [semantic-release](https://github.com/semantic-release/s
    1. Analysing the commits using `conventionalcommits` to figure out what the next version should be
    2. Generating releases notes for each package based on the commits
    3. Generating a changelog for each package based in the commits
-   4. Running [`platform release deb-prepare`](../platform_cli/groups/release.py#:~:text=deb_prepare) which builds the `.deb` in a docker container. Internally this will use [`platform pkg build`](../platform_cli/groups/packaging.py#:~:text=build) to build the `.deb` file and then a docker volume to mount the resultant `.deb` back to the host machine.
+   4. Running [`platform release deb-prepare`](../platform_cli/groups/release.py#:~:text=deb_prepare) which builds the `.deb` in a docker container. 
+      1. Sets up `tonistiigi/binfmt` which allows docker to run `arm64` containers on `amd64` machines
+      2. Create a local docker registry on [localhost:5000](http://localhost:5000) to store the built images
+      3. Uses `buildx` to build for both `amd64` and `arm64` and push to the local registry
+      4. Executes [`platform pkg build`](../platform_cli/groups/packaging.py#:~:text=build) inside each docker container to build the `.deb` with a docker volume to mount the resultant `.deb` back to the host machine.
    5. Running [`platform release deb-publish`](../platform_cli/groups/release.py#:~:text=deb_publish) to publish the `.deb` to the apt repo
    6. Uploading the `.deb` to the github release
    7. Commiting back the changes to the `CHANGELOG.md` files
