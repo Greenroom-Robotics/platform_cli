@@ -121,7 +121,11 @@ class Packaging(PlatformCliGroup):
             echo(f"Moving {len(debs)} .deb / .ddeb files to {output}", "blue")
             if debs:
                 for d in debs:
-                    shutil.move(str(d), output)
+                    try:
+                        shutil.move(str(d), output)
+                    except Exception as e:
+                        raise click.ClickException(f"Error moving .deb. You may need to chown the output folder: {e}")
+
             else:
                 raise click.ClickException("No debs found.")
 
