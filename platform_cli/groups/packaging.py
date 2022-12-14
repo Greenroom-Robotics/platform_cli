@@ -130,7 +130,7 @@ class Packaging(PlatformCliGroup):
                 raise click.ClickException("No debs found.")
 
             # remove the debian folder because it will prevent the next build
-            os.remove("debian")
+            shutil.rmtree("debian")
 
             echo("Build complete", "green")
 
