@@ -164,8 +164,8 @@ class Release(PlatformCliGroup):
             package_info = self._get_package_info()
             docker_image_name = f"{DOCKER_REGISTRY}/{package_info.platform_module_name}:latest"
 
-            # Install binfmt support for arm64
-            docker.run("tonistiigi/binfmt", privileged=True, remove=True)
+            # Install qemu binfmt support for other architectures
+            docker.run("multiarch/qemu-user-static", ["--reset", "-p", "yes", "--credential", "yes"], privileged=True, remove=True)
 
             # Start a local registry on port 5000
             try:
