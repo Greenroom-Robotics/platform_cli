@@ -13,6 +13,11 @@ class PkgEnv(TypedDict):
     GHCR_PAT: str
 
 
+def check_directory_ownership(path: Path) -> bool:
+    stat = path.stat()
+    return stat.st_uid == os.getuid() and stat.st_gid == os.getgid()
+
+
 def get_ros_env() -> RosEnv:
     if "PLATFORM_MODULE" not in os.environ:
         raise click.ClickException("PLATFORM_MODULE environment variable must be set. eg) platform_perception")
