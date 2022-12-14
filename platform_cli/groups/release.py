@@ -104,6 +104,8 @@ class Release(PlatformCliGroup):
 
         # Make the .debs directory on the host, otherwise docker will make it with root permissions!
         os.makedirs(host_debs_path, exist_ok=True)
+        # Make the .debs directory writable by all users
+        os.chmod(host_debs_path, 0o777)
 
         return docker.run(
             f"{docker_image_name}@{image_for_docker_platform.digest}",
