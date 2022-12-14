@@ -19,17 +19,17 @@ def check_directory_ownership(path: Path) -> bool:
 
 
 def get_ros_env() -> RosEnv:
-    if "PLATFORM_MODULE" not in os.environ:
-        raise click.ClickException("PLATFORM_MODULE environment variable must be set. eg) platform_perception")
-    if "ROS_OVERLAY" not in os.environ:
-        raise click.ClickException("ROS_OVERLAY environment variable must be set. eg) /opt/ros/humble")
+    for env in RosEnv.__required_keys__:
+        if env not in os.environ:
+            raise click.ClickException(f"{env} environment variable must be set.")
     
     return cast(RosEnv, os.environ)
 
 
 def get_pkg_env() -> PkgEnv:
-    if "GHCR_PAT" not in os.environ:
-        raise click.ClickException("Personal access token not in environment variables! Aborting.")
+    for env in PkgEnv.__required_keys__:
+        if env not in os.environ:
+            raise click.ClickException(f"{env} environment variable must be set.")
 
     return cast(PkgEnv, os.environ)
 
