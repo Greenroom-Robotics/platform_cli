@@ -35,7 +35,7 @@ def parse_version(version: str):
 def get_apt_repo_url() -> str:
     """If we have API_TOKEN_GITHUB, use https, otherwise use ssh"""
     if "API_TOKEN_GITHUB" in os.environ:
-        return f"https://x-access-token:{os.environ['API_TOKEN_GITHUB']}@{GR_APT_REPO}.git" 
+        return f"https://x-access-token:{os.environ['API_TOKEN_GITHUB']}@github.com/{GR_APT_REPO}.git" 
             
     return f"git@github.com:{GR_APT_REPO}.git"
 
