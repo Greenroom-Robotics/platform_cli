@@ -169,9 +169,9 @@ class Release(PlatformCliGroup):
 
             # Start a local registry on port 5000
             try:
-                docker.run("registry:2", publish=[(5000, 5000)], detach=True, name="registry")
-            except:
-                echo("Local registry already running", "yellow")
+                docker.run("registry:2", publish=[(5000, 5000)], detach=True, name="registry", remove=True)
+            except Exception as e:
+                echo(f"Local registry already running: {e}", "yellow")
 
             try:
                 # Configure docker to use the platform buildx builder
