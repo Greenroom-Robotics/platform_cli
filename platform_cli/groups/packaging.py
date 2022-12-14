@@ -8,7 +8,7 @@ import os
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.helpers import call, stdout_call, get_pkg_env, echo
 
-GR_APT_REPO_URL = "git@github.com:Greenroom-Robotics/packages.git"
+GR_APT_REPO = "Greenroom-Robotics/packages"
 GR_APT_REPO_PATH = Path.home() / ".gr/gr-packages"
 
 def get_ros_distro():
@@ -32,6 +32,12 @@ def parse_version(version: str):
         
     return version_semver, version_prerelease
 
+def get_apt_repo_url() -> str:
+    """If we have API_TOKEN_GITHUB, use https, otherwise use ssh"""
+    if "API_TOKEN_GITHUB" in os.environ:
+        return f"https://x-access-token:{os.environ['API_TOKEN_GITHUB']}@{GR_APT_REPO}.git" 
+            
+    return f"git@github.com:{GR_APT_REPO}.git"
 
 class Packaging(PlatformCliGroup):
     def create(self, cli: click.Group):
@@ -137,7 +143,8 @@ class Packaging(PlatformCliGroup):
         @pkg.command(name="apt-clone")
         def apt_clone(): # type: ignore reportUnusedFunction
             """Checks out the GR apt repo"""
-            call(f"git clone --filter=blob:none {GR_APT_REPO_URL} {GR_APT_REPO_PATH}")
+            github_repo_url = get_apt_repo_url()
+            call(f"git clone --filter=blob:none {github_repo_url} {GR_APT_REPO_PATH}")
 
         @pkg.command(name="apt-push")
         def apt_push(): # type: ignore reportUnusedFunction
