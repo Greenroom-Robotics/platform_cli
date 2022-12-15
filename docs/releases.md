@@ -2,17 +2,31 @@
 
 ## How to create a release
 
-Simply run the release workflow from any platform module repo.
+Simply run the `release` workflow from any platform module repo.
 
+## FAQs
 
-## How releases work
+### 1. How are versions determined?
+
+Versions are determined by the commit messages on each package. We use [conventionalcommits](https://www.conventionalcommits.org/en/v1.0.0/) to determine the next version. This is done using [semantic-release/commit-analyzer](https://github.com/semantic-release/commit-analyzer)
+
+Essentially:
+* `fix:` commits will bump the patch version
+* `feat:` commits will bump the minor version
+* `BREAKING CHANGE:` commits will bump the major version
+
+### 2. How can I re-release a package?
+
+If you try and release a package that has already been released (and does not have any new `fix:`, `feat:` or `BREAKING CHANGE:` commits) then semantic release will NOT release it. If you want to release it anyway, you'll need to open up the `tags` on github and delete the tag for the package. Then you can re-run the release workflow.
+
+### 3. How releases work
 
 Releases are done using [semantic-release](https://github.com/semantic-release/semantic-release). There are 2 tricky things here... 
 1. We want to build and version each package separately which is why we use [multi-semantic-release](https://github.com/qiwi/multi-semantic-release). 
 2. We want to build `.deb`s for both **AMD64** and **ARM64** and possibly multiple versions of ROS which is why we use docker to build the `.deb` files. We then need to mount these back to the host machine so they can be linked into a single release.
 
 
-### Setup:
+#### Setup:
 `platform release setup` is run from the root of a platform module repo. This will:
 
 1. Copy a `package.json`, `yarn.lock` and `release.config.js` into the root of the project.
@@ -21,7 +35,7 @@ Releases are done using [semantic-release](https://github.com/semantic-release/s
 4. The [release.config.js](../platform_cli/assets/release.config.js) config will be used for all of the packages (even though it is used in the root of the project)
 5. We **DO NOT** want to commit back the `package.json`, `yarn.lock` or `release.config.js`.
 
-### Creating the release:
+#### Creating the release:
 `platform release create` is run from the root of a platform module repo. This will:
 
 1. Run `yarn multi-semantic-release` which triggers [multi-semantic-release](https://github.com/qiwi/multi-semantic-release) to run `semantic-release` on each package in the repo. It determines packages by looking for `package.json` files in the repo.
