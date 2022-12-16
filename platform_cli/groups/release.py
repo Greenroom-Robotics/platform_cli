@@ -220,8 +220,9 @@ class Release(PlatformCliGroup):
                         architecture=architecture,
                         image_manifests=image_manifests,
                     )
-                except:
+                except Exception as e:
                     echo(f"Failed to build .deb for {architecture}", "red")
+                    raise e
 
         @release.command(name="deb-publish")
         def deb_publish():  # type: ignore
