@@ -113,7 +113,7 @@ class Packaging(PlatformCliGroup):
                     bloom_args += f' --src-dir={src_dir / pkgs[pkg_name]}'
 
             if no_tests:
-                bloom_args += "--no-tests"
+                bloom_args += " --no-tests"
 
             call(f"bloom-generate {pkg_type} --ros-distro {get_ros_distro()} {bloom_args}")
 
