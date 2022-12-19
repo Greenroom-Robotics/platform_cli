@@ -55,7 +55,7 @@ class Packaging(PlatformCliGroup):
         @pkg.command(name="clean")
         def clean(): # type: ignore reportUnusedFunction
             """Removes debians and log directories"""
-            dirs = ['.obj-x86_64-linux-gnu', '.obj-arm64-linux-gnu', 'debian', 'log']
+            dirs = ['.obj-x86_64-linux-gnu', '.obj-aarch64-linux-gnu', 'debian', 'log']
 
             for d in dirs:
                 p = Path(d)
