@@ -62,8 +62,8 @@ class Packaging(PlatformCliGroup):
                 if p.is_dir():
                     shutil.rmtree(p)
 
-        @pkg.command(name="install-deps")
-        def deps_refresh(): # type: ignore reportUnusedFunction
+        @pkg.command(name="refresh-deps")
+        def refresh_deps(): # type: ignore reportUnusedFunction
             """Installs rosdeps"""
             call("sudo apt-get update")
             call("rosdep update")
@@ -73,7 +73,7 @@ class Packaging(PlatformCliGroup):
             """Installs rosdeps"""
             get_pkg_env()
             pkg_dir = Path.cwd()
-            deps_refresh()
+            refresh_deps()
             call(f"rosdep install -y --rosdistro {get_ros_distro()} --from-paths {pkg_dir} -i")
 
         @pkg.command(name="get-sources")
