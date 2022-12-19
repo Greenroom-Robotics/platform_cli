@@ -109,7 +109,7 @@ class Packaging(PlatformCliGroup):
             # need to make this more generic
             if src_dir.is_dir():
                 pkgs = find_packages(src_dir)
-                if pkgs:
+                if pkgs and pkg_name in pkgs:
                     bloom_args += f' --src-dir={src_dir / pkgs[pkg_name]}'
 
             if no_tests:
