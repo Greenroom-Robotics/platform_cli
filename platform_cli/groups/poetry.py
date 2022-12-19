@@ -8,7 +8,8 @@ from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.helpers import echo, call, get_project_root
 
 
-def get_non_ros_poetry_packages(path: Path=get_project_root / "packages"):
+def get_non_ros_poetry_packages(path: Path=None):
+    path = path if path else get_project_root() / "packages"
     package_xmls = glob(str(path / "**/package.xml"), recursive=True)
     package_xml_dirs = [Path(item).parent for item in package_xmls]
     pyproject_tomls = glob(str(path / "**/pyproject.toml"), recursive=True)
