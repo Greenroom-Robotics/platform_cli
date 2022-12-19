@@ -48,38 +48,37 @@ class Packaging(PlatformCliGroup):
         @pkg.command(name="setup")
         def setup(): # type: ignore reportUnusedFunction
             """Sets up the greenroom apt and rosdep lists"""
-            call("curl -s https://$GHCR_PAT@raw.githubusercontent.com/Greenroom-Robotics/rosdistro/main/scripts/setup-rosdep.sh | bash -s")
-            call("curl -s https://$GHCR_PAT@raw.githubusercontent.com/Greenroom-Robotics/packages/main/scripts/setup-apt.sh | bash -s")
-            call("apt-get update", sudo=True)
+            call(f"curl -s https://{os.environ['GHCR_PAT']}@raw.githubusercontent.com/Greenroom-Robotics/rosdistro/main/scripts/setup-rosdep.sh | bash -s")
+            call(f"curl -s https://{os.environ['GHCR_PAT']}@raw.githubusercontent.com/Greenroom-Robotics/packages/main/scripts/setup-apt.sh | bash -s")
             call("rosdep init", sudo=True, abort=False)
-            call("rosdep update")
 
         @pkg.command(name="clean")
         def clean(): # type: ignore reportUnusedFunction
             """Removes debians and log directories"""
-            dirs = ['.obj-x86_64-linux-gnu', 'debian', 'log']
+            dirs = ['.obj-x86_64-linux-gnu', '.obj-aarch64-linux-gnu', 'debian', 'log']
 
             for d in dirs:
                 p = Path(d)
                 if p.is_dir():
                     shutil.rmtree(p)
 
-            files = get_debs(Path.cwd())
-            for f in files:
-                f.unlink()
+        @pkg.command(name="refresh-deps")
+        def refresh_deps(): # type: ignore reportUnusedFunction
+            """Installs rosdeps"""
+            call("sudo apt-get update")
+            call("rosdep update")
 
         @pkg.command(name="install-deps")
         def install_deps(): # type: ignore reportUnusedFunction
             """Installs rosdeps"""
             get_pkg_env()
             pkg_dir = Path.cwd()
-            call("sudo apt-get update")
-            call("rosdep update")
+            refresh_deps()
             call(f"rosdep install -y --rosdistro {get_ros_distro()} --from-paths {pkg_dir} -i")
 
         @pkg.command(name="get-sources")
         def get_sources(): # type: ignore reportUnusedFunction
-            """Imports items from the .repo dir"""
+            """Imports items from the .repo file"""
             if Path(".repos").is_file():
                 call("vcs import --recursive < .repos")
             else:
@@ -115,6 +114,10 @@ class Packaging(PlatformCliGroup):
             if no_tests:
                 bloom_args += " --no-tests"
 
+            # this is the equivalent of turning off type safety for compiled libraries.
+            # TODO rework the build process to build deps debs first if required, then install debs then build pkgs
+            bloom_args += " --ignore-shlibs-missing-info"
+
             call(f"bloom-generate {pkg_type} --ros-distro {get_ros_distro()} {bloom_args}")
 
             cpus = cpu_count() if cpu_count() else 1
@@ -122,7 +125,7 @@ class Packaging(PlatformCliGroup):
 
             # the .deb and .ddeb files are in the parent directory
             # move .deb/.ddeb files into the output folder
-            os.makedirs(output, exist_ok=True)
+            Path(output).mkdir(parents=True, exist_ok=True)
             debs = get_debs(Path.cwd().parent)
             echo(f"Moving {len(debs)} .deb / .ddeb files to {output}", "blue")
             if debs:
@@ -134,9 +137,6 @@ class Packaging(PlatformCliGroup):
 
             else:
                 raise click.ClickException("No debs found.")
-
-            # remove the debian folder because it will prevent the next build
-            shutil.rmtree("debian")
 
             echo("Build complete", "green")
 

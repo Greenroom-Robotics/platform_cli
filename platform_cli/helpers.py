@@ -13,18 +13,23 @@ class PkgEnv(TypedDict):
     GHCR_PAT: str
 
 
+def check_directory_ownership(path: Path) -> bool:
+    stat = path.stat()
+    return stat.st_uid == os.getuid() and stat.st_gid == os.getgid()
+
+
 def get_ros_env() -> RosEnv:
-    if "PLATFORM_MODULE" not in os.environ:
-        raise click.ClickException("PLATFORM_MODULE environment variable must be set. eg) platform_perception")
-    if "ROS_OVERLAY" not in os.environ:
-        raise click.ClickException("ROS_OVERLAY environment variable must be set. eg) /opt/ros/humble")
+    for env in RosEnv.__required_keys__:
+        if env not in os.environ:
+            raise click.ClickException(f"{env} environment variable must be set.")
     
     return cast(RosEnv, os.environ)
 
 
 def get_pkg_env() -> PkgEnv:
-    if "GHCR_PAT" not in os.environ:
-        raise click.ClickException("Personal access token not in environment variables! Aborting.")
+    for env in PkgEnv.__required_keys__:
+        if env not in os.environ:
+            raise click.ClickException(f"{env} environment variable must be set.")
 
     return cast(PkgEnv, os.environ)
 
@@ -66,7 +71,7 @@ def stdout_call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=F
     return proc.stdout.decode('ascii')
 
 
-def call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=False, abort: bool=True, sudo: bool=False):
+def call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=False, abort: bool=True, sudo: bool=False, env=None):
     if project_root_cwd and cwd:
         raise RuntimeError("Both 'cwd' and 'project_root_cwd' are set")
 
@@ -75,12 +80,15 @@ def call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=False, a
         if cwd is None:
             raise RuntimeError("Could not find project root.")
 
+    if env:
+        env = {**os.environ, **env}
+
     if sudo:
         command = "sudo " + command
         
     click.echo(click.style(f"Running: {click.style(command, bold=True)} in {click.style(str(cwd if cwd else Path.cwd()), bold=True)}", fg="blue"))
     try:
-        proc = subprocess.run(command, shell=True, executable="/bin/bash", cwd=cwd, check=abort)
+        proc = subprocess.run(command, shell=True, executable="/bin/bash", cwd=cwd, check=abort, env=env)
     except subprocess.CalledProcessError as e:
         print(e)
         raise click.ClickException("Run failed")

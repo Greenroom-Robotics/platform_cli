@@ -103,13 +103,13 @@ class Release(PlatformCliGroup):
         docker_debs_path = f"/home/ros/{platform_module_name}/{PACKAGES_DIRECTORY}/{package_name}/{DEBS_DIRECTORY}"
 
         # Make the .debs directory on the host, otherwise docker will make it with root permissions!
-        os.makedirs(host_debs_path, exist_ok=True)
+        host_debs_path.mkdir(exist_ok=True)
         # Make the .debs directory writable by all users
         os.chmod(host_debs_path, 0o777)
 
         return docker.run(
             f"{docker_image_name}@{image_for_docker_platform.digest}",
-            ["/bin/bash", "-c", f"source /home/ros/.profile && platform pkg build --version {version} --output {DEBS_DIRECTORY}"],
+            ["/bin/bash", "-c", f"source /home/ros/.profile && platform pkg build --version {version} --output {DEBS_DIRECTORY} && platform pkg clean"],
             interactive=True,
             workdir=f'/home/ros/{platform_module_name}/{PACKAGES_DIRECTORY}/{package_name}',
             volumes=[

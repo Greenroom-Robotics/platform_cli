@@ -5,22 +5,24 @@ import click
 import subprocess
 
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import get_ros_env, echo
+from platform_cli.helpers import get_ros_env, echo, call
+
+def get_ros_poetry_packages(path:Path) -> List[Path]:
+    package_xmls = glob(str(path / "**/package.xml"), recursive=True)
+    package_xml_dirs = [Path(item).parent for item in package_xmls]
+    pyproject_tomls = glob(str(path / "**/pyproject.toml"), recursive=True)
+    pyproject_toml_dirs = [Path(item).parent for item in pyproject_tomls]
+
+    ros_poetry_packages: List[Path] = []
+    for dir in pyproject_toml_dirs:
+        if dir in package_xml_dirs:
+            ros_poetry_packages.append(dir)
+
+    echo(f"{len(ros_poetry_packages)} package(s) found", 'green')
+    return ros_poetry_packages
+
 
 class Ros(PlatformCliGroup):
-    def _get_ros_poetry_packages(self, path:Path) -> List[Path]:
-        package_xmls = glob(str(path / "**/package.xml"), recursive=True)
-        package_xml_dirs = [Path(item).parent for item in package_xmls]
-        pyproject_tomls = glob(str(path / "**/pyproject.toml"), recursive=True)
-        pyproject_toml_dirs = [Path(item).parent for item in pyproject_tomls]
-
-        ros_poetry_packages: List[Path] = []
-        for dir in pyproject_toml_dirs:
-            if dir in package_xml_dirs:
-                ros_poetry_packages.append(dir)
-
-        echo(f"{len(ros_poetry_packages)} package(s) found", 'green')
-        return ros_poetry_packages
 
     def create(self, cli: click.Group):
         @cli.group(help="CLI handlers associated with ROS packages")
@@ -30,36 +32,25 @@ class Ros(PlatformCliGroup):
         @ros.command(name="build")
         @click.argument("args", nargs=-1)
         def build(args: List[str]): # type: ignore
-            """Runs colcon build on all ros package"""
+            """Runs colcon build on all ROS package"""
 
             env = get_ros_env()
             args_str = " ".join(args)
 
             echo("Building packages...", 'green')
-            error = subprocess.call(
-                f"colcon build --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}",
-                shell=True,
-                executable='/bin/bash'
-            )
-            if (error):
-                raise click.ClickException("Build failed")
-                
+            call(f"colcon build --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}")
+
         @ros.command(name="test")
         @click.argument("args", nargs=-1)
         def test(args: List[str]): # type: ignore
-            """Runs colcon test on all ros packages"""
+            """Runs colcon test on all ROS packages"""
 
             env = get_ros_env()
             args_str = " ".join(args)
 
             echo("Testing packages...", 'green')
-            error = subprocess.call(
-                f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}; colcon test-result --all --verbose",
-                shell=True,
-                executable='/bin/bash'
-            )
-            if (error):
-                raise click.ClickException("Test failed")
+            call(f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}")
+            call("colcon test-result --all --verbose")
 
         @ros.command(name="install_poetry_deps")
         @click.option('--base-path', type=str, help="The path to where the packages are installed")
@@ -69,16 +60,16 @@ class Ros(PlatformCliGroup):
             env = get_ros_env()
             base_path = Path(base_path) if base_path else Path(f"/opt/greenroom/{env['PLATFORM_MODULE']}")
 
-
             echo(f"Installing all poetry deps in {base_path} using pip", 'green')
-            ros_poetry_packages = self._get_ros_poetry_packages(base_path)
+            ros_poetry_packages = get_ros_poetry_packages(base_path)
             # Disable venv
-            subprocess.call("poetry config virtualenvs.create false", shell=True, executable='/bin/bash')
+            call("poetry config virtualenvs.create false")
 
             for dir in ros_poetry_packages:
                 echo(f"Installing {str(dir)}...", "blue")
                 # export dependencies to a requirements.txt file without hashes to decrease time to resolve dependencies.
                 # https://github.com/python-poetry/poetry-plugin-export/issues/78
-                error = subprocess.call(f"cd {dir} && poetry export -f requirements.txt --without-hashes --output requirements.txt && pip3 install -r requirements.txt && rm requirements.txt", shell=True, executable='/bin/bash')
-                if (error):
-                    raise click.ClickException("Install failed")
+                call(f"poetry export -f requirements.txt --without-hashes --output requirements.txt", cwd=dir)
+                call(f"pip3 install -r requirements.txt", cwd=dir)
+                (dir / "requirements.txt").unlink()
+

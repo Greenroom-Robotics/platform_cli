@@ -5,25 +5,26 @@ from typing import List
 import click
 
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import echo
+from platform_cli.helpers import echo, call, get_project_root
 
-default_path = Path.cwd() / "packages"
+
+def get_non_ros_poetry_packages(path: Path=None):
+    path = path if path else get_project_root() / "packages"
+    package_xmls = glob(str(path / "**/package.xml"), recursive=True)
+    package_xml_dirs = [Path(item).parent for item in package_xmls]
+    pyproject_tomls = glob(str(path / "**/pyproject.toml"), recursive=True)
+    pyproject_toml_dirs = [Path(item).parent for item in pyproject_tomls]
+
+    non_ros_poetry_packages: List[Path] = []
+    for dir in pyproject_toml_dirs:
+        if dir not in package_xml_dirs:
+            non_ros_poetry_packages.append(dir)
+
+    echo(f"{len(non_ros_poetry_packages)} package(s) found", 'green')
+    return non_ros_poetry_packages
+
 
 class Poetry(PlatformCliGroup):
-    def _get_non_ros_poetry_packages(self, path: Path=default_path):
-        package_xmls = glob(str(path / "**/package.xml"), recursive=True)
-        package_xml_dirs = [Path(item).parent for item in package_xmls]
-        pyproject_tomls = glob(str(path / "**/pyproject.toml"), recursive=True)
-        pyproject_toml_dirs = [Path(item).parent for item in pyproject_tomls]
-
-        non_ros_poetry_packages: List[Path] = []
-        for dir in pyproject_toml_dirs:
-            if dir not in package_xml_dirs:
-                non_ros_poetry_packages.append(dir)
-
-        echo(f"{len(non_ros_poetry_packages)} package(s) found", 'green')
-        return non_ros_poetry_packages
-
     def create(self, cli: click.Group):
         @cli.group(help="CLI handlers associated with pure poetry packages")
         def poetry():
