@@ -78,7 +78,7 @@ class Packaging(PlatformCliGroup):
 
         @pkg.command(name="get-sources")
         def get_sources(): # type: ignore reportUnusedFunction
-            """Imports items from the .repo dir"""
+            """Imports items from the .repo file"""
             if Path(".repos").is_file():
                 call("vcs import --recursive < .repos")
             else:
@@ -113,6 +113,10 @@ class Packaging(PlatformCliGroup):
 
             if no_tests:
                 bloom_args += " --no-tests"
+
+            # this is the equivalent of turning off type safety for compiled libraries.
+            # TODO rework the build process to build deps debs first if required, then install debs then build pkgs
+            bloom_args += " --ignore-shlibs-missing-info"
 
             call(f"bloom-generate {pkg_type} --ros-distro {get_ros_distro()} {bloom_args}")
 
