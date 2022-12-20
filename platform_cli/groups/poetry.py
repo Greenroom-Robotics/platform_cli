@@ -35,7 +35,7 @@ class Poetry(PlatformCliGroup):
             """Runs poetry install on all poetry packages"""
 
             echo("Installing non-ros poetry packages...", 'blue')
-            non_ros_poetry_packages = self._get_non_ros_poetry_packages()
+            non_ros_poetry_packages = get_non_ros_poetry_packages()
             for dir in non_ros_poetry_packages:
                 echo(f"Installing {str(dir)}...", "blue")
                 error = subprocess.call(f"cd {dir} && poetry install", shell=True, executable='/bin/bash')
@@ -49,7 +49,7 @@ class Poetry(PlatformCliGroup):
 
             echo("Testing non-ros poetry packages...", "blue")
             # Find the packages which are not ros packages...
-            non_ros_poetry_packages = self._get_non_ros_poetry_packages()
+            non_ros_poetry_packages = get_non_ros_poetry_packages()
 
             for dir in non_ros_poetry_packages:
                 echo(f"Running tests for {str(dir)}...", "blue")
