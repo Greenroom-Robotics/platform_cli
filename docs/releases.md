@@ -43,8 +43,8 @@ If you try and release a package that has already been released (and does not ha
 
 ### 3. How releases work
 
-Releases are done using [semantic-release](https://github.com/semantic-release/semantic-release). There are 2 tricky things here... 
-1. We want to build and version each package separately which is why we use [multi-semantic-release](https://github.com/qiwi/multi-semantic-release). 
+Releases are done using [semantic-release](https://github.com/semantic-release/semantic-release). There are 2 tricky things here...
+1. We want to build and version each package separately which is why we use [multi-semantic-release](https://github.com/qiwi/multi-semantic-release).
 2. We want to build `.deb`s for both **AMD64** and **ARM64** and possibly multiple versions of ROS which is why we use docker to build the `.deb` files. We then need to mount these back to the host machine so they can be linked into a single release.
 
 
@@ -66,7 +66,7 @@ Releases are done using [semantic-release](https://github.com/semantic-release/s
    1. Analysing the commits using `conventionalcommits` to figure out what the next version should be
    2. Generating releases notes for each package based on the commits
    3. Generating a changelog for each package based in the commits
-   4. Running [`platform release deb-prepare`](../platform_cli/groups/release.py#:~:text=deb_prepare) which builds the `.deb` in a docker container. 
+   4. Running [`platform release deb-prepare`](../platform_cli/groups/release.py#:~:text=deb_prepare) which builds the `.deb` in a docker container.
       1. Sets up `tonistiigi/binfmt` which allows docker to run `arm64` containers on `amd64` machines
       2. Create a local docker registry on [localhost:5000](http://localhost:5000) to store the built images
       3. Uses `buildx` to build for both `amd64` and `arm64` and push to the local registry

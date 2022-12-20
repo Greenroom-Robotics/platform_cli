@@ -20,7 +20,7 @@ DOCKER_REGISTRY = "localhost:5000"
 
 
 @dataclass
-class PackageInfo():
+class PackageInfo:
     package_path: Path
     package_name: str
     platform_module_path: Path
@@ -33,20 +33,16 @@ class Release(PlatformCliGroup):
         This will generate a fake package.json next to any package.xml.
         This is done as a hack so semantic-release can be used to release the package.
         """
-        echo(
-            f"Looking in ./{PACKAGES_DIRECTORY} for package.xml files", "blue")
-        package_xmls = glob(
-            str(Path.cwd() / f"{PACKAGES_DIRECTORY}/**/package.xml"))
+        echo(f"Looking in ./{PACKAGES_DIRECTORY} for package.xml files", "blue")
+        package_xmls = glob(str(Path.cwd() / f"{PACKAGES_DIRECTORY}/**/package.xml"))
 
         echo(f"Total found: {len(package_xmls)}", "blue")
         for package_xml_path in package_xmls:
             package_xml = ET.parse(package_xml_path)
             root = package_xml.getroot()
             package_name = root.find("name").text  # type: ignore
-            package_json = {"name": package_name,
-                            "version": "0.0.0", "license": "UNLICENSED"}
-            package_json_path = str(
-                Path(package_xml_path).parent / "package.json")
+            package_json = {"name": package_name, "version": "0.0.0", "license": "UNLICENSED"}
+            package_json_path = str(Path(package_xml_path).parent / "package.json")
 
             echo(f"Writing {package_json_path}", "blue")
             f = open(package_json_path, "w")
@@ -84,7 +80,7 @@ class Release(PlatformCliGroup):
         package_name: str,
         docker_image_name: str,
         architecture: str,
-        image_manifests: Manifest
+        image_manifests: Manifest,
     ):
         """
         Runs the build command in a docker container
@@ -94,12 +90,15 @@ class Release(PlatformCliGroup):
         manifests = image_manifests.manifests or []
 
         # Find the image for the platform and archicture
-        image_for_docker_platform = next(manifest for manifest in manifests if manifest.platform and manifest.platform.architecture == architecture)
+        image_for_docker_platform = next(
+            manifest
+            for manifest in manifests
+            if manifest.platform and manifest.platform.architecture == architecture
+        )
         echo(f"Docker image manifest {image_for_docker_platform}", "blue")
         docker_plaform = f"linux/{architecture}"
 
-        host_debs_path = platform_module_path / \
-            PACKAGES_DIRECTORY / package_name / DEBS_DIRECTORY
+        host_debs_path = platform_module_path / PACKAGES_DIRECTORY / package_name / DEBS_DIRECTORY
         docker_debs_path = f"/home/ros/{platform_module_name}/{PACKAGES_DIRECTORY}/{package_name}/{DEBS_DIRECTORY}"
 
         # Make the .debs directory on the host, otherwise docker will make it with root permissions!
@@ -109,9 +108,13 @@ class Release(PlatformCliGroup):
 
         return docker.run(
             f"{docker_image_name}@{image_for_docker_platform.digest}",
-            ["/bin/bash", "-c", f"source /home/ros/.profile && platform pkg build --version {version} --output {DEBS_DIRECTORY} && platform pkg clean"],
+            [
+                "/bin/bash",
+                "-c",
+                f"source /home/ros/.profile && platform pkg build --version {version} --output {DEBS_DIRECTORY} && platform pkg clean",
+            ],
             interactive=True,
-            workdir=f'/home/ros/{platform_module_name}/{PACKAGES_DIRECTORY}/{package_name}',
+            workdir=f"/home/ros/{platform_module_name}/{PACKAGES_DIRECTORY}/{package_name}",
             volumes=[
                 # We only mount the /debs directory for each package
                 (host_debs_path, docker_debs_path)
@@ -128,8 +131,7 @@ class Release(PlatformCliGroup):
         def setup():  # type: ignore
             """Copies the package.json and yarn.lock into the root of the project and installs the deps"""
 
-            echo(
-                "Copying package.json and yarn.lock to root and installing deps...", 'blue')
+            echo("Copying package.json and yarn.lock to root and installing deps...", "blue")
             asset_dir = Path(__file__).parent.parent / "assets"
 
             dest_path_package_json = Path.cwd() / "package.json"
@@ -145,33 +147,48 @@ class Release(PlatformCliGroup):
             call("yarn install --frozen-lockfile")
 
         @release.command(name="create")
-        @click.argument("args", nargs=-1,)
+        @click.argument(
+            "args",
+            nargs=-1,
+        )
         def create(args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See release.config.js for more info"""
             args_str = " ".join(args)
             call(f"yarn multi-semantic-release {args_str}")
 
         @release.command(name="deb-prepare")
-        @click.option('--version', type=str, help="The version to call the debian", required=True)
-        @click.option('--arch', type=str, help="The archictecture to build for. OS will be linux. eg) linux/{architecture}", default=["amd64", "arm64"], multiple=True)
+        @click.option("--version", type=str, help="The version to call the debian", required=True)
+        @click.option(
+            "--arch",
+            type=str,
+            help="The archictecture to build for. OS will be linux. eg) linux/{architecture}",
+            default=["amd64", "arm64"],
+            multiple=True,
+        )
         def deb_prepare(version: str, arch: List[str]):  # type: ignore
             """Prepares the release by building the debian package inside a docker container"""
-            docker_platforms = [
-                f"linux/{architecture}" for architecture in arch]
+            docker_platforms = [f"linux/{architecture}" for architecture in arch]
             echo(f"Preparing .deb for {arch}", "blue")
 
-            if ("API_TOKEN_GITHUB" not in os.environ):
-                raise Exception(f"API_TOKEN_GITHUB must be set")
+            if "API_TOKEN_GITHUB" not in os.environ:
+                raise Exception("API_TOKEN_GITHUB must be set")
 
             package_info = self._get_package_info()
             docker_image_name = f"{DOCKER_REGISTRY}/{package_info.platform_module_name}:latest"
 
             # Install qemu binfmt support for other architectures
-            docker.run("multiarch/qemu-user-static", ["--reset", "-p", "yes", "--credential", "yes"], privileged=True, remove=True)
+            docker.run(
+                "multiarch/qemu-user-static",
+                ["--reset", "-p", "yes", "--credential", "yes"],
+                privileged=True,
+                remove=True,
+            )
 
             # Start a local registry on port 5000
             try:
-                docker.run("registry:2", publish=[(5000, 5000)], detach=True, name="registry", remove=True)
+                docker.run(
+                    "registry:2", publish=[(5000, 5000)], detach=True, name="registry", remove=True
+                )
             except Exception as e:
                 echo(f"Local registry already running: {e}", "yellow")
 
@@ -179,16 +196,26 @@ class Release(PlatformCliGroup):
                 # Configure docker to use the platform buildx builder
                 # Network host is required for the local registry to work
                 docker.buildx.create(
-                    name="platform", driver="docker-container", use=True, driver_options={"network": "host"})
-            except:
+                    name="platform",
+                    driver="docker-container",
+                    use=True,
+                    driver_options={"network": "host"},
+                )
+            except Exception:
                 echo("docker buildx environment already exists", "yellow")
-                echo("Consider running `docker buildx rm platform` if you want to reset the build environment", "yellow")
+                echo(
+                    "Consider running `docker buildx rm platform` if you want to reset the build environment",
+                    "yellow",
+                )
 
             docker.buildx.use("platform")
 
             docker_file_exists = os.path.isfile("../../Dockerfile")
             if not docker_file_exists:
-                echo(f"Dockerfile does not exist in {package_info.platform_module_path}. This must be run from a package directory.", "red")
+                echo(
+                    f"Dockerfile does not exist in {package_info.platform_module_path}. This must be run from a package directory.",
+                    "red",
+                )
                 exit(1)
 
             # Build the images for arm and amd using buildx
@@ -199,14 +226,11 @@ class Release(PlatformCliGroup):
                 build_args={
                     "API_TOKEN_GITHUB": os.environ["API_TOKEN_GITHUB"],
                 },
-                output={
-                    "type": "registry"
-                },
+                output={"type": "registry"},
             )
-     
+
             # Inspect the image to get the manifest
-            image_manifests = docker.buildx.imagetools.inspect(
-                docker_image_name)
+            image_manifests = docker.buildx.imagetools.inspect(docker_image_name)
 
             for architecture in arch:
                 echo(f"Building .deb for {architecture}", "blue")

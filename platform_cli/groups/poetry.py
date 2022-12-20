@@ -7,13 +7,13 @@ from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.helpers import echo, call, get_project_root
 
 
-def get_non_ros_poetry_packages(path: Optional[Path]=None):
+def get_non_ros_poetry_packages(path: Optional[Path] = None):
     if not path:
         # TODO get_project_root shouldn't probably fail in this case
         prj_root = get_project_root()
         if not prj_root:
-            prj_root = Path.cwd()           
-        
+            prj_root = Path.cwd()
+
         path = prj_root / "packages"
 
     package_xmls = glob(str(path / "**/package.xml"), recursive=True)
@@ -26,7 +26,7 @@ def get_non_ros_poetry_packages(path: Optional[Path]=None):
         if dir not in package_xml_dirs:
             non_ros_poetry_packages.append(dir)
 
-    echo(f"{len(non_ros_poetry_packages)} package(s) found", 'green')
+    echo(f"{len(non_ros_poetry_packages)} package(s) found", "green")
     return non_ros_poetry_packages
 
 
@@ -37,18 +37,18 @@ class Poetry(PlatformCliGroup):
             pass
 
         @poetry.command(name="install")
-        def install(): # type: ignore
+        def install():  # type: ignore
             """Runs poetry install on all poetry packages"""
 
-            echo("Installing non-ros poetry packages...", 'blue')
+            echo("Installing non-ros poetry packages...", "blue")
             non_ros_poetry_packages = get_non_ros_poetry_packages()
             for dir in non_ros_poetry_packages:
                 echo(f"Installing {str(dir)}...", "blue")
-                call(f"poetry install", cwd=dir)
+                call("poetry install", cwd=dir)
             echo("Complete", "green")
 
         @poetry.command(name="test")
-        def test(): # type: ignore
+        def test():  # type: ignore
             """Runs pytest on all poetry packages"""
 
             echo("Testing non-ros poetry packages...", "blue")
@@ -57,6 +57,6 @@ class Poetry(PlatformCliGroup):
 
             for dir in non_ros_poetry_packages:
                 echo(f"Running tests for {str(dir)}...", "blue")
-                call(f"python3 -m pytest .", cwd=dir)
+                call("python3 -m pytest .", cwd=dir)
 
             echo("Complete", "green")

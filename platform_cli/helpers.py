@@ -9,6 +9,7 @@ class RosEnv(TypedDict):
     PLATFORM_MODULE: str
     ROS_OVERLAY: str
 
+
 class PkgEnv(TypedDict):
     GHCR_PAT: str
 
@@ -19,15 +20,15 @@ def check_directory_ownership(path: Path) -> bool:
 
 
 def get_ros_env() -> RosEnv:
-    for env in RosEnv.__required_keys__: # type: ignore
+    for env in RosEnv.__required_keys__:  # type: ignore
         if env not in os.environ:
             raise click.ClickException(f"{env} environment variable must be set.")
-    
+
     return cast(RosEnv, os.environ)
 
 
 def get_pkg_env() -> PkgEnv:
-    for env in PkgEnv.__required_keys__: # type: ignore
+    for env in PkgEnv.__required_keys__:  # type: ignore
         if env not in os.environ:
             raise click.ClickException(f"{env} environment variable must be set.")
 
@@ -35,7 +36,7 @@ def get_pkg_env() -> PkgEnv:
 
 
 def echo(msg: str, color: str):
-    click.echo(click.style(msg, fg=color)) # type: ignore
+    click.echo(click.style(msg, fg=color))  # type: ignore
 
 
 def get_project_root() -> Optional[Path]:
@@ -52,7 +53,9 @@ def get_project_root() -> Optional[Path]:
     return None
 
 
-def stdout_call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=False, abort: bool=True) -> str:
+def stdout_call(
+    command: str, cwd: Optional[Path] = None, project_root_cwd: bool = False, abort: bool = True
+) -> str:
     if project_root_cwd and cwd:
         raise RuntimeError("Both 'cwd' and 'project_root_cwd' are set")
 
@@ -61,16 +64,31 @@ def stdout_call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=F
         if cwd is None:
             raise RuntimeError("Could not find project root.")
 
-    click.echo(click.style(f"Running: {click.style(command, bold=True)} in {click.style(str(cwd if cwd else Path.cwd()), bold=True)}", fg="blue"))
+    click.echo(
+        click.style(
+            f"Running: {click.style(command, bold=True)} in {click.style(str(cwd if cwd else Path.cwd()), bold=True)}",
+            fg="blue",
+        )
+    )
     try:
-        proc = subprocess.run(command, shell=True, executable="/bin/bash", capture_output=True, cwd=cwd, check=abort)
+        proc = subprocess.run(
+            command, shell=True, executable="/bin/bash", capture_output=True, cwd=cwd, check=abort
+        )
     except subprocess.CalledProcessError as e:
         print(e)
         raise click.ClickException("Run failed")
 
-    return proc.stdout.decode('ascii')
+    return proc.stdout.decode("ascii")
 
-def call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=False, abort: bool=True, sudo: bool=False, env: Dict[str, str] = {}):
+
+def call(
+    command: str,
+    cwd: Optional[Path] = None,
+    project_root_cwd: bool = False,
+    abort: bool = True,
+    sudo: bool = False,
+    env: Dict[str, str] = {},
+):
     if project_root_cwd and cwd:
         raise RuntimeError("Both 'cwd' and 'project_root_cwd' are set")
 
@@ -83,10 +101,17 @@ def call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=False, a
 
     if sudo:
         command = "sudo " + command
-        
-    click.echo(click.style(f"Running: {click.style(command, bold=True)} in {click.style(str(cwd if cwd else Path.cwd()), bold=True)}", fg="blue"))
+
+    click.echo(
+        click.style(
+            f"Running: {click.style(command, bold=True)} in {click.style(str(cwd if cwd else Path.cwd()), bold=True)}",
+            fg="blue",
+        )
+    )
     try:
-        proc = subprocess.run(command, shell=True, executable="/bin/bash", cwd=cwd, check=abort, env=env)
+        proc = subprocess.run(
+            command, shell=True, executable="/bin/bash", cwd=cwd, check=abort, env=env
+        )
     except subprocess.CalledProcessError as e:
         print(e)
         raise click.ClickException("Run failed")

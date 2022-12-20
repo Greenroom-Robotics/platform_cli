@@ -11,33 +11,48 @@ from platform_cli.helpers import call, stdout_call, get_pkg_env, echo
 GR_APT_REPO = "Greenroom-Robotics/packages"
 GR_APT_REPO_PATH = Path.home() / ".gr/gr-packages"
 
+
 def get_ros_distro():
-    return os.environ['ROS_DISTRO']
+    return os.environ["ROS_DISTRO"]
+
 
 def get_debs(p: Path) -> List[Path]:
     return list(p.glob("*.deb")) + list(p.glob("*.ddeb"))
 
+
 def find_packages(p: Path) -> Dict[str, str]:
     # hack city.. hack hack city bitch
-    pkgs = {k: v for k, v in zip(stdout_call(f"colcon list -n", cwd=p).split("\n"), stdout_call(f"colcon list -p", cwd=p).split("\n")) if k and v}
+    pkgs = {
+        k: v
+        for k, v in zip(
+            stdout_call("colcon list -n", cwd=p).split("\n"),
+            stdout_call("colcon list -p", cwd=p).split("\n"),
+        )
+        if k and v
+    }
     return pkgs
+
 
 def parse_version(version: str):
     # version should be of the form "1.2.3" or "1.2.3-alpha.1"
     version_split = version.split("-")
     version_semver = version_split[0]
     version_prerelease = version_split[1] if len(version_split) == 2 else ""
-    if (len(version_semver.split(".")) != 3):
+    if len(version_semver.split(".")) != 3:
         raise ValueError("Version should be of the form 1.2.3 or 1.2.3-alpha1")
-        
+
     return version_semver, version_prerelease
+
 
 def get_apt_repo_url() -> str:
     """If we have API_TOKEN_GITHUB, use https, otherwise use ssh"""
     if "API_TOKEN_GITHUB" in os.environ:
-        return f"https://x-access-token:{os.environ['API_TOKEN_GITHUB']}@github.com/{GR_APT_REPO}.git" 
-            
+        return (
+            f"https://x-access-token:{os.environ['API_TOKEN_GITHUB']}@github.com/{GR_APT_REPO}.git"
+        )
+
     return f"git@github.com:{GR_APT_REPO}.git"
+
 
 class Packaging(PlatformCliGroup):
     def create(self, cli: click.Group):
@@ -46,16 +61,20 @@ class Packaging(PlatformCliGroup):
             pass
 
         @pkg.command(name="setup")
-        def setup(): # type: ignore reportUnusedFunction
+        def setup():  # type: ignore reportUnusedFunction
             """Sets up the greenroom apt and rosdep lists"""
-            call(f"curl -s https://{os.environ['GHCR_PAT']}@raw.githubusercontent.com/Greenroom-Robotics/rosdistro/main/scripts/setup-rosdep.sh | bash -s")
-            call(f"curl -s https://{os.environ['GHCR_PAT']}@raw.githubusercontent.com/Greenroom-Robotics/packages/main/scripts/setup-apt.sh | bash -s")
+            call(
+                f"curl -s https://{os.environ['GHCR_PAT']}@raw.githubusercontent.com/Greenroom-Robotics/rosdistro/main/scripts/setup-rosdep.sh | bash -s"
+            )
+            call(
+                f"curl -s https://{os.environ['GHCR_PAT']}@raw.githubusercontent.com/Greenroom-Robotics/packages/main/scripts/setup-apt.sh | bash -s"
+            )
             call("rosdep init", sudo=True, abort=False)
 
         @pkg.command(name="clean")
-        def clean(): # type: ignore reportUnusedFunction
+        def clean():  # type: ignore reportUnusedFunction
             """Removes debians and log directories"""
-            dirs = ['.obj-x86_64-linux-gnu', '.obj-aarch64-linux-gnu', 'debian', 'log']
+            dirs = [".obj-x86_64-linux-gnu", ".obj-aarch64-linux-gnu", "debian", "log"]
 
             for d in dirs:
                 p = Path(d)
@@ -63,13 +82,13 @@ class Packaging(PlatformCliGroup):
                     shutil.rmtree(p)
 
         @pkg.command(name="refresh-deps")
-        def refresh_deps(): # type: ignore reportUnusedFunction
+        def refresh_deps():  # type: ignore reportUnusedFunction
             """Installs rosdeps"""
             call("sudo apt-get update")
             call("rosdep update")
 
         @pkg.command(name="install-deps")
-        def install_deps(): # type: ignore reportUnusedFunction
+        def install_deps():  # type: ignore reportUnusedFunction
             """Installs rosdeps"""
             get_pkg_env()
             pkg_dir = Path.cwd()
@@ -77,7 +96,7 @@ class Packaging(PlatformCliGroup):
             call(f"rosdep install -y --rosdistro {get_ros_distro()} --from-paths {pkg_dir} -i")
 
         @pkg.command(name="get-sources")
-        def get_sources(): # type: ignore reportUnusedFunction
+        def get_sources():  # type: ignore reportUnusedFunction
             """Imports items from the .repo file"""
             if Path(".repos").is_file():
                 call("vcs import --recursive < .repos")
@@ -85,22 +104,26 @@ class Packaging(PlatformCliGroup):
                 raise click.ClickException("No '.repos' file found. Unsure how to obtain sources.")
 
         @pkg.command(name="build")
-        @click.option('--version', type=str, help="The version to call the debian", default=None)
-        @click.option('--output', type=str, default="debs", help="The output directory for the debs")
-        @click.option('--no-tests', type=bool, default=True)
-        def build(version: str, output: str, no_tests: bool): # type: ignore reportUnusedFunction
+        @click.option("--version", type=str, help="The version to call the debian", default=None)
+        @click.option(
+            "--output", type=str, default="debs", help="The output directory for the debs"
+        )
+        @click.option("--no-tests", type=bool, default=True)
+        def build(version: str, output: str, no_tests: bool):  # type: ignore reportUnusedFunction
             """Builds the package using bloom"""
 
             pkg_name = Path.cwd().name
             pkg_type = "rosdebian"
             src_dir = Path("src")
-            bloom_args = ''
+            bloom_args = ""
 
             if version is not None:
                 version_semver, version_prerelease = parse_version(version)
                 echo(f"Updating package.xml version to {version_semver}", "blue")
                 # This will replace anything between the <version></version> tags in the package.xml
-                call(f'sed -i \":a;N;\\$!ba; s|<version>.*<\\/version>|<version>{version_semver}<\\/version>|g" package.xml')
+                call(
+                    f'sed -i ":a;N;\\$!ba; s|<version>.*<\\/version>|<version>{version_semver}<\\/version>|g" package.xml'
+                )
 
                 if version_prerelease:
                     bloom_args += f'-i "{version_prerelease}"'
@@ -109,7 +132,7 @@ class Packaging(PlatformCliGroup):
             if src_dir.is_dir():
                 pkgs = find_packages(src_dir)
                 if pkgs and pkg_name in pkgs:
-                    bloom_args += f' --src-dir={src_dir / pkgs[pkg_name]}'
+                    bloom_args += f" --src-dir={src_dir / pkgs[pkg_name]}"
 
             if no_tests:
                 bloom_args += " --no-tests"
@@ -133,7 +156,9 @@ class Packaging(PlatformCliGroup):
                     try:
                         shutil.move(str(d), output)
                     except Exception as e:
-                        raise click.ClickException(f"Error moving .deb. You may need to chown the output folder: {e}")
+                        raise click.ClickException(
+                            f"Error moving .deb. You may need to chown the output folder: {e}"
+                        )
 
             else:
                 raise click.ClickException("No debs found.")
@@ -141,29 +166,29 @@ class Packaging(PlatformCliGroup):
             echo("Build complete", "green")
 
         @pkg.command(name="apt-clone")
-        def apt_clone(): # type: ignore reportUnusedFunction
+        def apt_clone():  # type: ignore reportUnusedFunction
             """Checks out the GR apt repo"""
             github_repo_url = get_apt_repo_url()
             call(f"git clone --filter=blob:none {github_repo_url} {GR_APT_REPO_PATH}")
 
         @pkg.command(name="apt-push")
-        def apt_push(): # type: ignore reportUnusedFunction
+        def apt_push():  # type: ignore reportUnusedFunction
             """Pushes to the GR apt repo"""
-            call(f"git pull --rebase", cwd=GR_APT_REPO_PATH)
-            call(f"git push", cwd=GR_APT_REPO_PATH)
+            call("git pull --rebase", cwd=GR_APT_REPO_PATH)
+            call("git push", cwd=GR_APT_REPO_PATH)
 
         @pkg.command(name="apt-update")
-        def apt_update(): # type: ignore reportUnusedFunction
+        def apt_update():  # type: ignore reportUnusedFunction
             """Update the GR apt repo"""
             if not GR_APT_REPO_PATH:
                 raise click.ClickException("GR apt repo has not been cloned.")
-            call(f"git pull --rebase", cwd=GR_APT_REPO_PATH)
+            call("git pull --rebase", cwd=GR_APT_REPO_PATH)
 
         @pkg.command(name="apt-add")
-        @click.argument('deb', type=click.Path(exists=True), required=False)
-        def apt_add(deb: str): # type: ignore reportUnusedFunction 
+        @click.argument("deb", type=click.Path(exists=True), required=False)
+        def apt_add(deb: str):  # type: ignore reportUnusedFunction
             """Adds a .deb to the GR apt repo"""
-            
+
             if not GR_APT_REPO_PATH:
                 raise click.ClickException("GR apt repo has not been cloned.")
 
@@ -178,4 +203,7 @@ class Packaging(PlatformCliGroup):
                 shutil.copy(d, GR_APT_REPO_PATH / "debian")
                 call(f"git add debian/{d.name}", cwd=GR_APT_REPO_PATH)
 
-            call(f"git commit -a -m 'feat: add debian package: {' '.join(d.name for d in debs)}'", cwd=GR_APT_REPO_PATH)
+            call(
+                f"git commit -a -m 'feat: add debian package: {' '.join(d.name for d in debs)}'",
+                cwd=GR_APT_REPO_PATH,
+            )

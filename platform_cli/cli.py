@@ -8,7 +8,6 @@ from platform_cli.groups.packaging import Packaging
 from platform_cli.groups.release import Release
 
 
-
 base_groups: List[PlatformCliGroup] = [
     Ros(),
     Poetry(),
@@ -21,11 +20,12 @@ help = f"""
 
 {click.style('A CLI for common scripts shared between Greenroom platform modules and platform CI.', fg='green', bold=True)}"""
 
-def init_platform_cli(help: str=help, extra_groups: List[PlatformCliGroup] = []):
+
+def init_platform_cli(help: str = help, extra_groups: List[PlatformCliGroup] = []):
     """
     This will initialise the platform_cli.
     A list of PlatformCliGroups can be passed in, these will also be initialised as cli_groups
-   
+
     Example:
 
     class SomeOtherGroup(PlatformCliGroup):
@@ -43,7 +43,7 @@ def init_platform_cli(help: str=help, extra_groups: List[PlatformCliGroup] = [])
     groups = [*base_groups, *extra_groups]
 
     @click.group(help=help)
-    def cli(): # type: ignore
+    def cli():  # type: ignore
         pass
 
     # Create all the groups
@@ -51,6 +51,7 @@ def init_platform_cli(help: str=help, extra_groups: List[PlatformCliGroup] = [])
         group.create(cli)
 
     cli()
-    
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     init_platform_cli()
