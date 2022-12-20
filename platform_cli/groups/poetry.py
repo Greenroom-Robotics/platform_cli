@@ -1,14 +1,13 @@
-import subprocess
 from glob import glob
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import click
 
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.helpers import echo, call, get_project_root
 
 
-def get_non_ros_poetry_packages(path: Path=None):
+def get_non_ros_poetry_packages(path: Optional[Path]=None):
     if not path:
         # TODO get_project_root shouldn't probably fail in this case
         prj_root = get_project_root()

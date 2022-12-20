@@ -1,4 +1,4 @@
-from typing import TypedDict, cast, Optional
+from typing import TypedDict, cast, Optional, Dict
 import click
 import os
 from pathlib import Path
@@ -19,7 +19,7 @@ def check_directory_ownership(path: Path) -> bool:
 
 
 def get_ros_env() -> RosEnv:
-    for env in RosEnv.__required_keys__:
+    for env in RosEnv.__required_keys__: # type: ignore
         if env not in os.environ:
             raise click.ClickException(f"{env} environment variable must be set.")
     
@@ -27,7 +27,7 @@ def get_ros_env() -> RosEnv:
 
 
 def get_pkg_env() -> PkgEnv:
-    for env in PkgEnv.__required_keys__:
+    for env in PkgEnv.__required_keys__: # type: ignore
         if env not in os.environ:
             raise click.ClickException(f"{env} environment variable must be set.")
 
@@ -70,8 +70,7 @@ def stdout_call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=F
 
     return proc.stdout.decode('ascii')
 
-
-def call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=False, abort: bool=True, sudo: bool=False, env=None):
+def call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=False, abort: bool=True, sudo: bool=False, env: Dict[str, str] = {}):
     if project_root_cwd and cwd:
         raise RuntimeError("Both 'cwd' and 'project_root_cwd' are set")
 
@@ -80,8 +79,7 @@ def call(command: str, cwd: Optional[Path]=None, project_root_cwd: bool=False, a
         if cwd is None:
             raise RuntimeError("Could not find project root.")
 
-    if env:
-        env = {**os.environ, **env}
+    env = {**os.environ, **env}
 
     if sudo:
         command = "sudo " + command
