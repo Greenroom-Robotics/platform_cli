@@ -9,7 +9,14 @@ from platform_cli.helpers import echo, call, get_project_root
 
 
 def get_non_ros_poetry_packages(path: Path=None):
-    path = path if path else get_project_root() / "packages"
+    if not path:
+        # TODO get_project_root shouldn't probably fail in this case
+        prj_root = get_project_root()
+        if not prj_root:
+            prj_root = Path.cwd()           
+        
+        path = prj_root / "packages"
+
     package_xmls = glob(str(path / "**/package.xml"), recursive=True)
     package_xml_dirs = [Path(item).parent for item in package_xmls]
     pyproject_tomls = glob(str(path / "**/pyproject.toml"), recursive=True)
@@ -38,9 +45,7 @@ class Poetry(PlatformCliGroup):
             non_ros_poetry_packages = get_non_ros_poetry_packages()
             for dir in non_ros_poetry_packages:
                 echo(f"Installing {str(dir)}...", "blue")
-                error = subprocess.call(f"cd {dir} && poetry install", shell=True, executable='/bin/bash')
-                if (error):
-                    raise click.ClickException("Install failed")
+                call(f"poetry install", cwd=dir)
             echo("Complete", "green")
 
         @poetry.command(name="test")
@@ -53,8 +58,6 @@ class Poetry(PlatformCliGroup):
 
             for dir in non_ros_poetry_packages:
                 echo(f"Running tests for {str(dir)}...", "blue")
-                error = subprocess.call(f"cd {dir} && python3 -m pytest .", shell=True, executable='/bin/bash')
-                if (error):
-                    raise click.ClickException("Pytest failed")
+                call(f"python3 -m pytest .", cwd=dir)
 
             echo("Complete", "green")
