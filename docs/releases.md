@@ -2,7 +2,29 @@
 
 ## How to create a release
 
-Simply run the `release` workflow from any platform module repo.
+### Release from a platform module repo in CI
+
+Simply run the `release` workflow from any *platform_module* repo.
+
+### Release locally
+
+If the workflow is running too slow you may want to build the release locally.
+
+Make sure you export the following environment variables:
+
+```bash
+export GITHUB_TOKEN=<github token>
+export API_TOKEN_GITHUB=<github token>
+export GHCR_PAT=<github token>
+export CI=true # So semantic-release actually runs
+```
+
+From a *platform_module* repo run:
+
+```bash
+platform release setup
+platform release create
+```
 
 ## FAQs
 
