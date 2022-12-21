@@ -50,11 +50,10 @@ class Ros(PlatformCliGroup):
             env = get_ros_env()
             args_str = " ".join(args)
 
-            echo("Testing packages...", "green")
-            call(
-                f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}"
-            )
-            call("colcon test-result --all --verbose")
+            echo("Testing packages...", 'green')
+            p = call(f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}", abort=False)
+            call("colcon test-result --all --verbose", abort=False)
+            exit(p.returncode)
 
         @ros.command(name="install_poetry_deps")
         @click.option("--base-path", type=str, help="The path to where the packages are installed")
