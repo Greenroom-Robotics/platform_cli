@@ -51,17 +51,17 @@ Releases are done using [semantic-release](https://github.com/semantic-release/s
 #### Setup:
 `platform release setup` is run from the root of a platform module repo. This will:
 
-1. Copy a `package.json`, `yarn.lock` and `release.config.js` into the root of the project.
+1. Copy a `package.json`, `yarn.lock` and `.releaserc` into the root of the project.
 2. `yarn install` all the nodejs deps (you need to have nodejs installed!)
 3. Find all the `package.xml` files in the repo and generate a `packages.json` file next to it (this is because `semantic-release` doesn't support `package.xml` files)
-4. The [release.config.js](../platform_cli/assets/release.config.js) config will be used for all of the packages (even though it is used in the root of the project)
-5. We **DO NOT** want to commit back the `package.json`, `yarn.lock` or `release.config.js`.
+4. The .`releaserc` config will be used for all of the packages (even though it is used in the root of the project)
+5. We **DO NOT** want to commit back the `package.json`, `yarn.lock` or `.releaserc`.
 
 #### Creating the release:
 `platform release create` is run from the root of a platform module repo. This will:
 
 1. Run `yarn multi-semantic-release` which triggers [multi-semantic-release](https://github.com/qiwi/multi-semantic-release) to run `semantic-release` on each package in the repo. It determines packages by looking for `package.json` files in the repo.
-2. From the root of each package it will follow the instructions in [release.config.js](../platform_cli//assets/release.config.js)
+2. From the root of each package it will follow the instructions in [releaserc](../platform_cli/groups/release.py#:~:text=releaserc) to build the release (see below
 3. This includes:
    1. Analysing the commits using `conventionalcommits` to figure out what the next version should be
    2. Generating releases notes for each package based on the commits

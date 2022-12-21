@@ -27,6 +27,38 @@ class PackageInfo:
     platform_module_name: str
 
 
+def get_releaserc(changelog: bool):
+    RELEASERC = {
+        "branches": ["main", {"name": "alpha", "prerelease": True}],
+        "plugins": [
+            ["@semantic-release/commit-analyzer", {"preset": "conventionalcommits"}],
+            ["@semantic-release/release-notes-generator", {"preset": "conventionalcommits"}],
+            "@semantic-release/changelog",
+            [
+                "@semantic-release/exec",
+                {
+                    "prepareCmd": "platform release deb-prepare --version ${nextRelease.version}",
+                    "publishCmd": "platform release deb-publish",
+                },
+            ],
+            [
+                "@semantic-release/github",
+                {"assets": [{"path": "**/*.deb"}], "successComment": False},
+            ],
+        ],
+    }
+    if changelog:
+        return {
+            **RELEASERC,
+            "plugins": [
+                *RELEASERC["plugins"],
+                ["@semantic-release/git", {"assets": ["CHANGELOG.md"]}],
+            ],
+        }
+
+    return RELEASERC
+
+
 class Release(PlatformCliGroup):
     def _generate_package_jsons_for_each_package(self):
         """
@@ -136,23 +168,33 @@ class Release(PlatformCliGroup):
 
             dest_path_package_json = Path.cwd() / "package.json"
             dest_path_yarn_lock = Path.cwd() / "yarn.lock"
-            dest_path_release_config = Path.cwd() / "release.config.js"
 
             shutil.copyfile(asset_dir / "package.json", dest_path_package_json)
             shutil.copyfile(asset_dir / "yarn.lock", dest_path_yarn_lock)
-            shutil.copyfile(asset_dir / "release.config.js", dest_path_release_config)
 
             self._generate_package_jsons_for_each_package()
 
             call("yarn install --frozen-lockfile")
 
         @release.command(name="create")
+        @click.option(
+            "--changelog",
+            type=bool,
+            help="Should we publish a CHANGELOG.md back to git",
+            default=True,
+        )
         @click.argument(
             "args",
             nargs=-1,
         )
-        def create(args: List[str]):  # type: ignore
-            """Creates a release of the platform module package. See release.config.js for more info"""
+        def create(changelog: bool, args: List[str]):  # type: ignore
+            """Creates a release of the platform module package. See .releaserc for more info"""
+            print(changelog)
+            releaserc = get_releaserc(changelog)
+            dest_path_releaserc = Path.cwd() / ".releaserc"
+            with open(dest_path_releaserc, "w+") as f:
+                f.write(json.dumps(releaserc, indent=4))
+
             args_str = " ".join(args)
             call(f"yarn multi-semantic-release {args_str}")
 
