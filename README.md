@@ -1,5 +1,7 @@
 # Platform CLI
 
+![Platform_CLI](docs/assets/platform_cli.png)
+
 A CLI for common commands shared between Greenroom Platform Modules and Platform CI
 
 ## Development
