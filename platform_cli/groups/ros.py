@@ -57,7 +57,6 @@ class Ros(PlatformCliGroup):
             echo("Testing packages...", 'green')
             p = call(f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}", abort=False)
             call(f"colcon test-result --all --verbose {args_str}", abort=False)
-            call("cat log/latest_test/logger_all.log")
             exit(p.returncode)
 
         @ros.command(name="install_poetry_deps")
