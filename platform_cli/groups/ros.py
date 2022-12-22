@@ -50,8 +50,11 @@ class Ros(PlatformCliGroup):
             env = get_ros_env()
             args_str = " ".join(args)
 
-            echo("Testing packages...", 'green')
-            p = call(f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}", abort=False)
+            echo("Testing packages...", "green")
+            p = call(
+                f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}",
+                abort=False,
+            )
             call("colcon test-result --all --verbose", abort=False)
             call("cat log/latest_test/logger_all.log")
             exit(p.returncode)
