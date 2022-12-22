@@ -83,7 +83,7 @@ class Packaging(PlatformCliGroup):
 
         @pkg.command(name="refresh-deps")
         def refresh_deps():  # type: ignore reportUnusedFunction
-            """Installs rosdeps"""
+            """Refresh rosdeps"""
             call("sudo apt-get update")
             call("rosdep update")
 
@@ -92,7 +92,7 @@ class Packaging(PlatformCliGroup):
             """Installs rosdeps"""
             get_pkg_env()
             pkg_dir = Path.cwd()
-            refresh_deps()
+            refresh_deps.callback() # type: ignore
             call(f"rosdep install -y --rosdistro {get_ros_distro()} --from-paths {pkg_dir} -i")
 
         @pkg.command(name="get-sources")
