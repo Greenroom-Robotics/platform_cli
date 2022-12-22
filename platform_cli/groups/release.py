@@ -307,7 +307,7 @@ class Release(PlatformCliGroup):
 
             # Build the images for arm and amd using buildx
             docker.buildx.build(
-                "../../",
+                package_info.platform_module_path,
                 platforms=docker_platforms,
                 tags=[docker_image_name],
                 build_args={
