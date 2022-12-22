@@ -54,8 +54,11 @@ class Ros(PlatformCliGroup):
             if results_dir:
                 args_str += f" --test-result-base {results_dir}"
 
-            echo("Testing packages...", 'green')
-            p = call(f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}", abort=False)
+            echo("Testing packages...", "green")
+            p = call(
+                f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}",
+                abort=False,
+            )
             call(f"colcon test-result --all --verbose {args_str}", abort=False)
             exit(p.returncode)
 

@@ -92,7 +92,7 @@ class Packaging(PlatformCliGroup):
             """Installs rosdeps"""
             get_pkg_env()
             pkg_dir = Path.cwd()
-            refresh_deps.callback() # type: ignore
+            refresh_deps.callback()  # type: ignore
             call(f"rosdep install -y --rosdistro {get_ros_distro()} --from-paths {pkg_dir} -i")
 
         @pkg.command(name="get-sources")
