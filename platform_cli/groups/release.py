@@ -40,10 +40,10 @@ def get_releaserc(changelog: bool):
                     "publishCmd": "platform release deb-publish",
                 },
             ],
-            # [
-            #     "@semantic-release/github",
-            #     # {"assets": [{"path": "**/*.deb"}], "successComment": False},
-            # ],
+            [
+                "@semantic-release/github",
+                {"assets": [{"path": "**/*.deb"}], "successComment": False},
+            ],
         ],
     }
     if changelog:
