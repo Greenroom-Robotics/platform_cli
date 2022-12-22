@@ -43,19 +43,20 @@ class Ros(PlatformCliGroup):
             )
 
         @ros.command(name="test")
+        @click.option("--results-dir", type=str, default=None)
         @click.argument("args", nargs=-1)
-        def test(args: List[str]):  # type: ignore
+        def test(results_dir: str, args: List[str]):  # type: ignore
             """Runs colcon test on all ROS packages"""
 
             env = get_ros_env()
             args_str = " ".join(args)
 
+            if results_dir:
+                args_str += f" --test-result-base {results_dir}"
+
             echo("Testing packages...", 'green')
-            p = call(
-                f"colcon test --test-result-base results --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}",
-                abort=False
-            )
-            call("colcon test-result --test-result-base results --all --verbose", abort=False)
+            p = call(f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}", abort=False)
+            call("colcon test-result --all --verbose {args_str}", abort=False)
             call("cat log/latest_test/logger_all.log")
             exit(p.returncode)
 
