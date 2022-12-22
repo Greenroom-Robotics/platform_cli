@@ -7,10 +7,6 @@
         "multi-semantic-release": "multi-semantic-release",
         "semantic-release": "semantic-release"
     },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/greenroom-robotics/platform_cli.git"
-    },
     "author": "Greenroom Robotics Team <team@greenroomrobotics.com.au>",
     "license": "UNLICENSED",
     "bugs": {
