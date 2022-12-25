@@ -39,6 +39,18 @@ def echo(msg: str, color: str):
     click.echo(click.style(msg, fg=color))  # type: ignore
 
 
+def log_group_start(group_name: str):
+    """Log a group start to the github actions log"""
+    if (os.environ.get("CI") or "").lower() == "true":
+        print(f"::group::{group_name}")
+
+
+def log_group_end():
+    """Log a group end to the github actions log"""
+    if (os.environ.get("CI") or "").lower() == "true":
+        print("::endgroup::")
+
+
 def get_project_root() -> Optional[Path]:
     # not sure of a great way to find the project root, find the first .git directory?
 
@@ -54,7 +66,10 @@ def get_project_root() -> Optional[Path]:
 
 
 def stdout_call(
-    command: str, cwd: Optional[Path] = None, project_root_cwd: bool = False, abort: bool = True
+    command: str,
+    cwd: Optional[Path] = None,
+    project_root_cwd: bool = False,
+    abort: bool = True,
 ) -> str:
     if project_root_cwd and cwd:
         raise RuntimeError("Both 'cwd' and 'project_root_cwd' are set")
@@ -72,7 +87,12 @@ def stdout_call(
     )
     try:
         proc = subprocess.run(
-            command, shell=True, executable="/bin/bash", capture_output=True, cwd=cwd, check=abort
+            command,
+            shell=True,
+            executable="/bin/bash",
+            capture_output=True,
+            cwd=cwd,
+            check=abort,
         )
     except subprocess.CalledProcessError as e:
         print(e)

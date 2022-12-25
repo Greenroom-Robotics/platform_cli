@@ -3,6 +3,7 @@ import shutil
 
 import os
 from typing import List
+from enum import Enum
 from glob import glob
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -12,10 +13,15 @@ from python_on_whales import docker
 from python_on_whales.components.buildx.imagetools.models import Manifest
 
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import echo, call
+from platform_cli.helpers import echo, call, log_group_start, log_group_end
 
 DEBS_DIRECTORY = "debs"
 DOCKER_REGISTRY = "localhost:5000"
+
+
+class ReleaseMode(Enum):
+    SINGLE = "SINGLE"
+    MULTI = "MULTI"
 
 
 @dataclass
@@ -31,7 +37,10 @@ def get_releaserc(changelog: bool):
         "branches": ["main", {"name": "alpha", "prerelease": True}],
         "plugins": [
             ["@semantic-release/commit-analyzer", {"preset": "conventionalcommits"}],
-            ["@semantic-release/release-notes-generator", {"preset": "conventionalcommits"}],
+            [
+                "@semantic-release/release-notes-generator",
+                {"preset": "conventionalcommits"},
+            ],
             "@semantic-release/changelog",
             [
                 "@semantic-release/exec",
@@ -78,11 +87,31 @@ class Release(PlatformCliGroup):
             with open(dest, "w") as f:
                 json.dump(package_json, f, indent=4)
 
+    def _write_docker_file(self, asset_dir: Path, dest_dir: Path, release_mode: ReleaseMode):
+        dockerfile = (
+            asset_dir / "Dockerfile.single"
+            if release_mode == ReleaseMode.SINGLE
+            else asset_dir / "Dockerfile.multi"
+        )
+        dest = dest_dir / "Dockerfile"
+        shutil.copyfile(dockerfile, dest)
+
     def _write_package_json(self, dest: Path, package_name: str):
-        package_json = {"name": package_name, "version": "0.0.0", "license": "UNLICENSED"}
+        package_json = {
+            "name": package_name,
+            "version": "0.0.0",
+            "license": "UNLICENSED",
+        }
         echo(f"Writing {dest}", "blue")
         with open(dest, "w") as f:
             json.dump(package_json, f, indent=4)
+
+    def _get_release_mode(self) -> ReleaseMode:
+        """Returns the release mode for the current working directory"""
+        package_xml_path = Path.cwd() / "package.xml"
+        if package_xml_path.exists():
+            return ReleaseMode.SINGLE
+        return ReleaseMode.MULTI
 
     def _write_root_yarn_lock(self, src: Path):
         dest = Path.cwd() / "yarn.lock"
@@ -133,7 +162,7 @@ class Release(PlatformCliGroup):
         """
         package_path = Path.cwd()
         package_name = package_path.name
-        platform_module_path = self._check_parents_for_file("Dockerfile")
+        platform_module_path = self._check_parents_for_file(".git")
         platform_module_name = platform_module_path.name
 
         return PackageInfo(
@@ -155,7 +184,7 @@ class Release(PlatformCliGroup):
         Runs the build command in a docker container
         The volume is mounted so we have access to the created deb file
         """
-
+        log_group_start(f"Building {package_info.package_name} for {architecture}")
         manifests = image_manifests.manifests or []
 
         # Find the image for the platform and archicture
@@ -183,7 +212,7 @@ class Release(PlatformCliGroup):
         # Make the .debs directory writable by all users
         os.chmod(host_debs_path, 0o777)
 
-        return docker.run(
+        docker.run(
             f"{docker_image_name}@{image_for_docker_platform.digest}",
             [
                 "/bin/bash",
@@ -198,6 +227,7 @@ class Release(PlatformCliGroup):
             ],
             platform=docker_plaform,
         )
+        log_group_end()
 
     def create(self, cli: click.Group):
         @cli.group(help="CLI handlers associated releasing a platform module")
@@ -207,15 +237,29 @@ class Release(PlatformCliGroup):
         @release.command(name="setup")
         def setup():  # type: ignore
             """Copies the package.json and yarn.lock into the root of the project and installs the deps"""
-
-            echo("Copying package.json and yarn.lock to root and installing deps...", "blue")
+            log_group_start("Setting up release")
+            echo(
+                "Copying package.json and yarn.lock to root and installing deps...",
+                "blue",
+            )
             asset_dir = Path(__file__).parent.parent / "assets"
 
             self._write_root_package_json(asset_dir / "package.json")
             self._write_root_yarn_lock(asset_dir / "yarn.lock")
             self._generate_package_jsons_for_each_package()
 
+            release_mode = self._get_release_mode()
+            package_info = self._get_package_info()
+
+            # If a Dockerfile does not exist in the project root, create it
+            docker_file_exists = (package_info.package_path / "Dockerfile").exists()
+            echo(f"Dockerfile exists: {docker_file_exists}", "blue")
+            if not docker_file_exists:
+                echo("Creating Dockerfile...", "blue")
+                self._write_docker_file(asset_dir, package_info.platform_module_path, release_mode)
+
             call("yarn install --frozen-lockfile")
+            log_group_end()
 
         @release.command(name="create")
         @click.option(
@@ -230,26 +274,32 @@ class Release(PlatformCliGroup):
         )
         def create(changelog: bool, args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
+            args_str = " ".join(args)
+
+            log_group_start("Creating release")
+            # Create the releaserc file
             releaserc = get_releaserc(changelog)
             dest_path_releaserc = Path.cwd() / ".releaserc"
             with open(dest_path_releaserc, "w+") as f:
                 f.write(json.dumps(releaserc, indent=4))
 
-            args_str = " ".join(args)
+            # Run the correct release script in the package.json based off the release mode
+            release_mode = self._get_release_mode()
 
-            # Check to see if the root has a package.xml
-            package_xml_path = Path.cwd() / "package.xml"
-            if package_xml_path.exists():
+            if release_mode == ReleaseMode.SINGLE:
                 echo(
-                    "Root has a package.xml, running semantic-release for a single package", "blue"
+                    "Release mode: SINGLE, running semantic-release for root package",
+                    "blue",
                 )
                 call(f"yarn semantic-release {args_str}")
             else:
                 echo(
-                    "Root has no package.xml, running semantic-release for multiple packages",
+                    "Release mode: MULTI, running multi-semantic-release for root package",
                     "blue",
                 )
                 call(f"yarn multi-semantic-release {args_str}")
+
+            log_group_end()
 
         @release.command(name="deb-prepare")
         @click.option("--version", type=str, help="The version to call the debian", required=True)
@@ -263,6 +313,7 @@ class Release(PlatformCliGroup):
         def deb_prepare(version: str, arch: List[str]):  # type: ignore
             """Prepares the release by building the debian package inside a docker container"""
             docker_platforms = [f"linux/{architecture}" for architecture in arch]
+            log_group_start("Preparing .deb")
             echo(f"Preparing .deb for {arch}", "blue")
 
             if "API_TOKEN_GITHUB" not in os.environ:
@@ -282,7 +333,11 @@ class Release(PlatformCliGroup):
             # Start a local registry on port 5000
             try:
                 docker.run(
-                    "registry:2", publish=[(5000, 5000)], detach=True, name="registry", remove=True
+                    "registry:2",
+                    publish=[(5000, 5000)],
+                    detach=True,
+                    name="registry",
+                    remove=True,
                 )
             except Exception as e:
                 echo(f"Local registry already running: {e}", "yellow")
@@ -332,10 +387,12 @@ class Release(PlatformCliGroup):
                 except Exception as e:
                     echo(f"Failed to build .deb for {architecture}", "red")
                     raise e
+            log_group_end()
 
         @release.command(name="deb-publish")
         def deb_publish():  # type: ignore
             """Publishes the deb to the apt repo"""
+            log_group_start("Publishing .deb to apt repo")
             try:
                 call("platform pkg apt-clone")
             except Exception:
@@ -345,3 +402,4 @@ class Release(PlatformCliGroup):
 
             call("platform pkg apt-add", cwd=Path(debs_folder))
             call("platform pkg apt-push")
+            log_group_end()
