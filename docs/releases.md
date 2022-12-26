@@ -26,6 +26,18 @@ platform release setup
 platform release create
 ```
 
+## Project structure
+
+There are 2 different types of project structure we can release. We determine these automatically based on if there is a `package.xml` in the root of the repo or not.
+
+### 1. Single package
+
+This is the simplest structure. It is a single package with a `package.xml` and a `CMakeLists.txt` (if cpp) in the root of the repo. `semantic-release` will be run on the root of the repo.
+
+### 2. Multi package
+
+This is a more complex structure. It is a single repo with multiple packages. Each package has a `package.xml` and a `CMakeLists.txt` (if cpp) in the root of the package. `multi-semantic-release` will be run on the root of the repo.
+
 ## FAQs
 
 ### 1. How are versions determined?
