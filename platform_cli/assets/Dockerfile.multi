@@ -2,7 +2,7 @@ FROM ghcr.io/greenroom-robotics/ros_builder:humble-latest
 
 # Create the package_manifests by deleting everything other than pyproject.toml, poetry.lock and package.xml
 WORKDIR /package_manifests
-COPY ./packages .
+COPY ./ ./
 RUN sudo chown ros:ros .
 RUN sudo find . -regextype egrep -not -regex '.*/(pyproject\.toml|poetry\.lock|package\.xml)$' -type f -delete
 RUN sudo find . -type d -empty -delete
