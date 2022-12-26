@@ -120,6 +120,24 @@ class Release(PlatformCliGroup):
         with open(dest, "w") as f:
             json.dump(package_json, f, indent=4)
 
+    def _write_docker_ignore(self):
+        """Write a .dockerignore which ignores node_modules"""
+        dest = Path.cwd() / ".dockerignore"
+        # If the .dockerignore already exists, check to see if it already ignores node_modules
+        if dest.exists():
+            with open(dest) as f:
+                if "node_modules" in f.read():
+                    # It already ignores node_modules, so return
+                    return
+                # If it doesn't ignore node_modules, append it
+                with open(dest, "a") as f:
+                    f.write("node_modules")
+                return
+        # If there is no .dockerignore, create one
+        with open(dest, "w") as f:
+            f.write("node_modules")
+            return
+
     def _get_release_mode(self) -> ReleaseMode:
         """Returns the release mode for the current working directory"""
         package_xml_path = Path.cwd() / "package.xml"
@@ -282,6 +300,7 @@ class Release(PlatformCliGroup):
             )
             asset_dir = Path(__file__).parent.parent / "assets"
 
+            self._write_docker_ignore()
             self._write_root_yarn_lock(asset_dir / "yarn.lock")
             package_jsons = self._generate_package_jsons_for_each_package()
             self._write_root_package_json(asset_dir / "package.json", package_jsons)
