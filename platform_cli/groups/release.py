@@ -113,6 +113,11 @@ class Release(PlatformCliGroup):
             return ReleaseMode.SINGLE
         return ReleaseMode.MULTI
 
+    def _get_docker_image_name(self, platform_module_name: str) -> str:
+        """Returns the docker image name for a package"""
+        # Note, uppercase is not allowed in docker image names
+        return f"{DOCKER_REGISTRY}/{platform_module_name.lower()}:latest"
+
     def _write_root_yarn_lock(self, src: Path):
         dest = Path.cwd() / "yarn.lock"
         shutil.copyfile(src, dest)
@@ -313,15 +318,16 @@ class Release(PlatformCliGroup):
         def deb_prepare(version: str, arch: List[str]):  # type: ignore
             """Prepares the release by building the debian package inside a docker container"""
             docker_platforms = [f"linux/{architecture}" for architecture in arch]
-            echo(f"Preparing to build .deb for {arch}", "blue", group_start=True)
+            echo(f"Preparing to build .deb for {arch}", "blue")
 
             if "API_TOKEN_GITHUB" not in os.environ:
                 raise Exception("API_TOKEN_GITHUB must be set")
 
             package_info = self._get_package_info()
-            docker_image_name = f"{DOCKER_REGISTRY}/{package_info.platform_module_name}:latest"
+            docker_image_name = self._get_docker_image_name(package_info.platform_module_name)
 
             # Install qemu binfmt support for other architectures
+            echo("Setting up QEMU...", group_start=True)
             docker.run(
                 "multiarch/qemu-user-static",
                 ["--reset", "-p", "yes", "--credential", "yes"],
@@ -330,6 +336,7 @@ class Release(PlatformCliGroup):
             )
 
             # Start a local registry on port 5000
+            echo("Setting up local docker registry...", group_start=True, group_end=True)
             try:
                 docker.run(
                     "registry:2",
@@ -341,6 +348,7 @@ class Release(PlatformCliGroup):
             except Exception as e:
                 echo(f"Local registry already running: {e}", "yellow")
 
+            echo("Building docker container with buildx...", group_start=True, group_end=True)
             try:
                 # Configure docker to use the platform buildx builder
                 # Network host is required for the local registry to work

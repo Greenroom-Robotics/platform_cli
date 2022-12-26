@@ -44,10 +44,10 @@ def echo(
     """Echo a message to the console, if we are in a github actions environment, log it to the github actions log"""
     is_ci = (os.environ.get("CI") or "").lower() == "true"
     if is_ci:
+        if group_end:
+            print("::endgroup::")
         if group_start:
             print(f"::group::{msg}")
-        elif group_end:
-            print("::endgroup::")
         else:
             print(msg)
     else:
