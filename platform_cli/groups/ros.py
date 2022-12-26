@@ -2,7 +2,6 @@ from glob import glob
 from typing import List
 from pathlib import Path
 import click
-import subprocess
 
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.helpers import get_ros_env, echo, call
@@ -39,7 +38,7 @@ class Ros(PlatformCliGroup):
 
             echo("Building packages...", "green")
             call(
-                f"colcon build --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}"
+                f"colcon build --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} --paths * {args_str}"
             )
 
         @ros.command(name="test")
