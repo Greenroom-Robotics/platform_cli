@@ -32,6 +32,12 @@ class PackageInfo:
     platform_module_name: str
 
 
+@dataclass
+class ModuleInfo:
+    platform_module_path: Path
+    platform_module_name: str
+
+
 def get_releaserc(changelog: bool, public: bool = False):
     RELEASERC = {
         "branches": ["main", {"name": "alpha", "prerelease": True}],
@@ -88,6 +94,10 @@ class Release(PlatformCliGroup):
                 json.dump(package_json, f, indent=4)
 
     def _write_docker_file(self, asset_dir: Path, dest_dir: Path, release_mode: ReleaseMode):
+        """
+        Writes the dockerfile to the destination directory
+        Select the "single" or "multi" dockerfile based on the release mode
+        """
         dockerfile = (
             asset_dir / "Dockerfile.single"
             if release_mode == ReleaseMode.SINGLE
@@ -167,12 +177,23 @@ class Release(PlatformCliGroup):
         """
         package_path = Path.cwd()
         package_name = package_path.name
-        platform_module_path = self._check_parents_for_file(".git")
-        platform_module_name = platform_module_path.name
+        module_info = self._get_module_info()
 
         return PackageInfo(
             package_path=package_path,
             package_name=package_name,
+            platform_module_path=module_info.platform_module_path,
+            platform_module_name=module_info.platform_module_name,
+        )
+
+    def _get_module_info(self) -> ModuleInfo:
+        """
+        Returns the module info for the current working directory.
+        """
+        platform_module_path = self._check_parents_for_file(".git")
+        platform_module_name = platform_module_path.name
+
+        return ModuleInfo(
             platform_module_path=platform_module_path,
             platform_module_name=platform_module_name,
         )
@@ -257,14 +278,14 @@ class Release(PlatformCliGroup):
             self._generate_package_jsons_for_each_package()
 
             release_mode = self._get_release_mode()
-            package_info = self._get_package_info()
+            module_info = self._get_module_info()
 
-            # If a Dockerfile does not exist in the project root, create it
-            docker_file_exists = (package_info.package_path / "Dockerfile").exists()
+            # If a Dockerfile does not exist in the module root, create it
+            docker_file_exists = (module_info.platform_module_path / "Dockerfile").exists()
             echo(f"Dockerfile exists: {docker_file_exists}", "blue")
             if not docker_file_exists:
                 echo("Creating Dockerfile...", "blue")
-                self._write_docker_file(asset_dir, package_info.platform_module_path, release_mode)
+                self._write_docker_file(asset_dir, module_info.platform_module_path, release_mode)
 
             call("yarn install --frozen-lockfile")
             echo(group_end=True)

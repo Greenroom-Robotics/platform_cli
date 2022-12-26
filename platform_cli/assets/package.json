@@ -13,7 +13,7 @@
         "url": "https://github.com/greenroom-robotics/platform_cli/issues"
     },
     "workspaces": [
-        "*"
+        "**"
     ],
     "homepage": "https://github.com/greenroom-robotics/platform_cli#readme",
     "devDependencies": {
