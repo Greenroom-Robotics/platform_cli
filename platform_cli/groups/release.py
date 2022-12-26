@@ -13,7 +13,7 @@ from python_on_whales import docker
 from python_on_whales.components.buildx.imagetools.models import Manifest
 
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import echo, call, log_group_start, log_group_end
+from platform_cli.helpers import echo, call
 
 DEBS_DIRECTORY = "debs"
 DOCKER_REGISTRY = "localhost:5000"
@@ -184,7 +184,10 @@ class Release(PlatformCliGroup):
         Runs the build command in a docker container
         The volume is mounted so we have access to the created deb file
         """
-        log_group_start(f"Building {package_info.package_name} for {architecture}")
+        echo(
+            f"Building {package_info.package_name} .deb for {architecture}",
+            group_start=True,
+        )
         manifests = image_manifests.manifests or []
 
         # Find the image for the platform and archicture
@@ -227,7 +230,7 @@ class Release(PlatformCliGroup):
             ],
             platform=docker_plaform,
         )
-        log_group_end()
+        echo(group_end=True)
 
     def create(self, cli: click.Group):
         @cli.group(help="CLI handlers associated releasing a platform module")
@@ -237,7 +240,7 @@ class Release(PlatformCliGroup):
         @release.command(name="setup")
         def setup():  # type: ignore
             """Copies the package.json and yarn.lock into the root of the project and installs the deps"""
-            log_group_start("Setting up release")
+            echo("Setting up release...", "blue", group_start=True)
             echo(
                 "Copying package.json and yarn.lock to root and installing deps...",
                 "blue",
@@ -259,7 +262,7 @@ class Release(PlatformCliGroup):
                 self._write_docker_file(asset_dir, package_info.platform_module_path, release_mode)
 
             call("yarn install --frozen-lockfile")
-            log_group_end()
+            echo(group_end=True)
 
         @release.command(name="create")
         @click.option(
@@ -276,7 +279,6 @@ class Release(PlatformCliGroup):
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
 
-            log_group_start("Creating release")
             # Create the releaserc file
             releaserc = get_releaserc(changelog)
             dest_path_releaserc = Path.cwd() / ".releaserc"
@@ -299,8 +301,6 @@ class Release(PlatformCliGroup):
                 )
                 call(f"yarn multi-semantic-release {args_str}")
 
-            log_group_end()
-
         @release.command(name="deb-prepare")
         @click.option("--version", type=str, help="The version to call the debian", required=True)
         @click.option(
@@ -313,8 +313,7 @@ class Release(PlatformCliGroup):
         def deb_prepare(version: str, arch: List[str]):  # type: ignore
             """Prepares the release by building the debian package inside a docker container"""
             docker_platforms = [f"linux/{architecture}" for architecture in arch]
-            log_group_start("Preparing .deb")
-            echo(f"Preparing .deb for {arch}", "blue")
+            echo(f"Preparing to build .deb for {arch}", "blue", group_start=True)
 
             if "API_TOKEN_GITHUB" not in os.environ:
                 raise Exception("API_TOKEN_GITHUB must be set")
@@ -373,9 +372,9 @@ class Release(PlatformCliGroup):
 
             # Inspect the image to get the manifest
             image_manifests = docker.buildx.imagetools.inspect(docker_image_name)
+            echo(group_end=True)
 
             for architecture in arch:
-                echo(f"Building .deb for {architecture}", "blue")
                 try:
                     self._build_deb_in_docker(
                         version=version,
@@ -387,12 +386,11 @@ class Release(PlatformCliGroup):
                 except Exception as e:
                     echo(f"Failed to build .deb for {architecture}", "red")
                     raise e
-            log_group_end()
 
         @release.command(name="deb-publish")
         def deb_publish():  # type: ignore
             """Publishes the deb to the apt repo"""
-            log_group_start("Publishing .deb to apt repo")
+            echo("Publishing .deb to apt repo...", group_start=True)
             try:
                 call("platform pkg apt-clone")
             except Exception:
@@ -402,4 +400,4 @@ class Release(PlatformCliGroup):
 
             call("platform pkg apt-add", cwd=Path(debs_folder))
             call("platform pkg apt-push")
-            log_group_end()
+            echo(group_end=True)

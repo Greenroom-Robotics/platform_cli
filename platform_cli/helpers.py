@@ -35,20 +35,23 @@ def get_pkg_env() -> PkgEnv:
     return cast(PkgEnv, os.environ)
 
 
-def echo(msg: str, color: str):
-    click.echo(click.style(msg, fg=color))  # type: ignore
-
-
-def log_group_start(group_name: str):
-    """Log a group start to the github actions log"""
-    if (os.environ.get("CI") or "").lower() == "true":
-        print(f"::group::{group_name}")
-
-
-def log_group_end():
-    """Log a group end to the github actions log"""
-    if (os.environ.get("CI") or "").lower() == "true":
-        print("::endgroup::")
+def echo(
+    msg: str = "",
+    color: str = "blue",
+    group_start: bool = False,
+    group_end: bool = False,
+):
+    """Echo a message to the console, if we are in a github actions environment, log it to the github actions log"""
+    is_ci = (os.environ.get("CI") or "").lower() == "true"
+    if is_ci:
+        if group_start:
+            print(f"::group::{msg}")
+        elif group_end:
+            print("::endgroup::")
+        else:
+            print(msg)
+    else:
+        click.echo(click.style(msg, fg=color))  # type: ignore
 
 
 def get_project_root() -> Optional[Path]:
