@@ -32,7 +32,7 @@ class PackageInfo:
     platform_module_name: str
 
 
-def get_releaserc(changelog: bool):
+def get_releaserc(changelog: bool, public: bool = False):
     RELEASERC = {
         "branches": ["main", {"name": "alpha", "prerelease": True}],
         "plugins": [
@@ -46,7 +46,7 @@ def get_releaserc(changelog: bool):
                 "@semantic-release/exec",
                 {
                     "prepareCmd": "platform release deb-prepare --version ${nextRelease.version}",
-                    "publishCmd": "platform release deb-publish",
+                    "publishCmd": f"platform release deb-publish --public {public}",
                 },
             ],
             [
@@ -276,16 +276,22 @@ class Release(PlatformCliGroup):
             help="Should we publish a CHANGELOG.md back to git",
             default=True,
         )
+        @click.option(
+            "--public",
+            type=bool,
+            help="Should this package be published to the public PPA",
+            default=False,
+        )
         @click.argument(
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, args: List[str]):  # type: ignore
+        def create(changelog: bool, public: bool, args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
 
             # Create the releaserc file
-            releaserc = get_releaserc(changelog)
+            releaserc = get_releaserc(changelog, public)
             dest_path_releaserc = Path.cwd() / ".releaserc"
             with open(dest_path_releaserc, "w+") as f:
                 f.write(json.dumps(releaserc, indent=4))
@@ -405,14 +411,17 @@ class Release(PlatformCliGroup):
                     raise e
 
         @release.command(name="deb-publish")
-        def deb_publish():  # type: ignore
+        @click.option(
+            "--public",
+            type=bool,
+            help="Should this package be published to the public PPA",
+            default=False,
+        )
+        def deb_publish(public: bool):  # type: ignore
             """Publishes the deb to the apt repo"""
             try:
                 echo("Publishing .deb to apt repo...", group_start=True)
-                try:
-                    call("platform pkg apt-clone")
-                except Exception:
-                    echo("Apt repo already exists", "yellow")
+                call(f"platform pkg apt-clone --public {public}")
 
                 debs_folder = Path.cwd() / DEBS_DIRECTORY
 

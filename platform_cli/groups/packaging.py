@@ -8,7 +8,9 @@ import os
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.helpers import call, stdout_call, get_pkg_env, echo
 
-GR_APT_REPO = "Greenroom-Robotics/packages"
+
+GR_APT_REPO_PRIVATE = "Greenroom-Robotics/packages"
+GR_APT_REPO_PUBLIC = "Greenroom-Robotics/public_packages"
 GR_APT_REPO_PATH = Path.home() / ".gr/gr-packages"
 
 
@@ -44,14 +46,14 @@ def parse_version(version: str):
     return version_semver, version_prerelease
 
 
-def get_apt_repo_url() -> str:
+def get_apt_repo_url(public: bool = False) -> str:
     """If we have API_TOKEN_GITHUB, use https, otherwise use ssh"""
-    if "API_TOKEN_GITHUB" in os.environ:
-        return (
-            f"https://x-access-token:{os.environ['API_TOKEN_GITHUB']}@github.com/{GR_APT_REPO}.git"
-        )
+    packages_repo = GR_APT_REPO_PUBLIC if public else GR_APT_REPO_PRIVATE
 
-    return f"git@github.com:{GR_APT_REPO}.git"
+    if "API_TOKEN_GITHUB" in os.environ:
+        return f"https://x-access-token:{os.environ['API_TOKEN_GITHUB']}@github.com/{packages_repo}.git"
+
+    return f"git@github.com:{packages_repo}.git"
 
 
 class Packaging(PlatformCliGroup):
@@ -68,6 +70,9 @@ class Packaging(PlatformCliGroup):
             )
             call(
                 f"curl -s https://{os.environ['GHCR_PAT']}@raw.githubusercontent.com/Greenroom-Robotics/packages/main/scripts/setup-apt.sh | bash -s"
+            )
+            call(
+                "curl -s https://raw.githubusercontent.com/Greenroom-Robotics/public_packages/main/scripts/setup-apt.sh | bash -s"
             )
             call("rosdep init", sudo=True, abort=False)
 
@@ -106,7 +111,10 @@ class Packaging(PlatformCliGroup):
         @pkg.command(name="build")
         @click.option("--version", type=str, help="The version to call the debian", default=None)
         @click.option(
-            "--output", type=str, default="debs", help="The output directory for the debs"
+            "--output",
+            type=str,
+            default="debs",
+            help="The output directory for the debs",
         )
         @click.option("--no-tests", type=bool, default=True)
         def build(version: str, output: str, no_tests: bool):  # type: ignore reportUnusedFunction
@@ -166,10 +174,19 @@ class Packaging(PlatformCliGroup):
             echo("Build complete", "green")
 
         @pkg.command(name="apt-clone")
-        def apt_clone():  # type: ignore reportUnusedFunction
+        @click.option(
+            "--public",
+            type=bool,
+            help="Should this package be published to the public PPA",
+            default=False,
+        )
+        def apt_clone(public: bool):  # type: ignore reportUnusedFunction
             """Checks out the GR apt repo"""
-            github_repo_url = get_apt_repo_url()
-            call(f"git clone --filter=blob:none {github_repo_url} {GR_APT_REPO_PATH}")
+            github_repo_url = get_apt_repo_url(public)
+            try:
+                call(f"git clone --filter=blob:none {github_repo_url} {GR_APT_REPO_PATH}")
+            except Exception as e:
+                raise click.ClickException(f"Error cloning apt repo: {e}")
 
         @pkg.command(name="apt-push")
         def apt_push():  # type: ignore reportUnusedFunction
