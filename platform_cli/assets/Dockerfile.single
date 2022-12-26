@@ -1,9 +1,10 @@
 FROM ghcr.io/greenroom-robotics/ros_builder:humble-latest
 ARG API_TOKEN_GITHUB
+ARG PLATFORM_MODULE
 
-ENV PLATFORM_MODULE="platform_module"
 ENV GHCR_PAT=$API_TOKEN_GITHUB
 ENV API_TOKEN_GITHUB=$API_TOKEN_GITHUB
+ENV PLATFORM_MODULE=$PLATFORM_MODULE
 
 RUN sudo mkdir /opt/greenroom && sudo chown ros:ros /opt/greenroom
 

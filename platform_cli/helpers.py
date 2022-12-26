@@ -2,6 +2,7 @@ from typing import TypedDict, cast, Optional, Dict
 import click
 import os
 from pathlib import Path
+from enum import Enum
 import subprocess
 
 
@@ -12,6 +13,11 @@ class RosEnv(TypedDict):
 
 class PkgEnv(TypedDict):
     GHCR_PAT: str
+
+
+class LogLevels(Enum):
+    WARNING = "warning"
+    ERROR = "error"
 
 
 def check_directory_ownership(path: Path) -> bool:
@@ -40,6 +46,7 @@ def echo(
     color: str = "blue",
     group_start: bool = False,
     group_end: bool = False,
+    level: Optional[LogLevels] = None,
 ):
     """Echo a message to the console, if we are in a github actions environment, log it to the github actions log"""
     is_ci = (os.environ.get("CI") or "").lower() == "true"
@@ -49,7 +56,11 @@ def echo(
         if group_start:
             print(f"::group::{msg}")
         else:
-            print(msg)
+            # See https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#example-setting-an-error-message
+            if level:
+                print(f"::{level.value}::{msg}")
+            else:
+                print(msg)
     else:
         click.echo(click.style(msg, fg=color))  # type: ignore
 

@@ -13,7 +13,7 @@ from python_on_whales import docker
 from python_on_whales.components.buildx.imagetools.models import Manifest
 
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import echo, call
+from platform_cli.helpers import echo, call, LogLevels
 
 DEBS_DIRECTORY = "debs"
 DOCKER_REGISTRY = "localhost:5000"
@@ -348,7 +348,11 @@ class Release(PlatformCliGroup):
             except Exception as e:
                 echo(f"Local registry already running: {e}", "yellow")
 
-            echo("Building docker container with buildx...", group_start=True, group_end=True)
+            echo(
+                "Building docker container with buildx...",
+                group_start=True,
+                group_end=True,
+            )
             try:
                 # Configure docker to use the platform buildx builder
                 # Network host is required for the local registry to work
@@ -374,6 +378,7 @@ class Release(PlatformCliGroup):
                 tags=[docker_image_name],
                 build_args={
                     "API_TOKEN_GITHUB": os.environ["API_TOKEN_GITHUB"],
+                    "PLATFORM_MODULE": package_info.platform_module_name,
                 },
                 output={"type": "registry"},
             )
@@ -392,20 +397,28 @@ class Release(PlatformCliGroup):
                         image_manifests=image_manifests,
                     )
                 except Exception as e:
-                    echo(f"Failed to build .deb for {architecture}", "red")
+                    echo(
+                        f"Failed to build .deb for {architecture}",
+                        "red",
+                        level=LogLevels.ERROR,
+                    )
                     raise e
 
         @release.command(name="deb-publish")
         def deb_publish():  # type: ignore
             """Publishes the deb to the apt repo"""
-            echo("Publishing .deb to apt repo...", group_start=True)
             try:
-                call("platform pkg apt-clone")
-            except Exception:
-                echo("Apt repo already exists", "yellow")
+                echo("Publishing .deb to apt repo...", group_start=True)
+                try:
+                    call("platform pkg apt-clone")
+                except Exception:
+                    echo("Apt repo already exists", "yellow")
 
-            debs_folder = Path.cwd() / DEBS_DIRECTORY
+                debs_folder = Path.cwd() / DEBS_DIRECTORY
 
-            call("platform pkg apt-add", cwd=Path(debs_folder))
-            call("platform pkg apt-push")
-            echo(group_end=True)
+                call("platform pkg apt-add", cwd=Path(debs_folder))
+                call("platform pkg apt-push")
+                echo(group_end=True)
+            except Exception as e:
+                echo("Failed to publish .deb", "red", level=LogLevels.ERROR)
+                raise e
