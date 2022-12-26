@@ -78,7 +78,8 @@ class Release(PlatformCliGroup):
         """Returns all package.xmls ignoring those inside node_modules"""
         return [Path(p) for p in Path.cwd().glob("**/package.xml") if "node_modules" not in str(p)]
 
-    def _write_root_package_json(self, src: Path):
+    def _write_root_package_json(self, src: Path, package_jsons: List[Path]):
+        """Writes the root package.json file"""
         dest = Path.cwd() / "package.json"
         with open(src) as f:
             # Set the package_name to be the package.xml package name or the name of the cwd
@@ -89,7 +90,10 @@ class Release(PlatformCliGroup):
                 if package_xml_path.exists()
                 else Path.cwd().name
             )
+            # The package name is the name of the package.xml
             package_json["name"] = package_name
+            # The workspaces are the parent directories of the package.jsons
+            package_json["workspaces"] = [str(p.parent) for p in package_jsons]
             with open(dest, "w") as f:
                 json.dump(package_json, f, indent=4)
 
@@ -147,11 +151,16 @@ class Release(PlatformCliGroup):
         package_xmls = self.get_package_xmls()
 
         echo(f"Total found: {len(package_xmls)}", "blue")
+
+        package_jsons: List[Path] = []
         for package_xml_path in package_xmls:
             package_name = self._get_package_name_from_package_xml(package_xml_path)
             package_json_path = Path(package_xml_path).parent / "package.json"
+            package_jsons.append(package_json_path)
             if not package_json_path.exists():
                 self._write_package_json(package_json_path, package_name)
+
+        return package_jsons
 
     def _check_parents_for_file(self, filename: str) -> Path:
         """Checks each parent directory for a file"""
@@ -273,9 +282,9 @@ class Release(PlatformCliGroup):
             )
             asset_dir = Path(__file__).parent.parent / "assets"
 
-            self._write_root_package_json(asset_dir / "package.json")
             self._write_root_yarn_lock(asset_dir / "yarn.lock")
-            self._generate_package_jsons_for_each_package()
+            package_jsons = self._generate_package_jsons_for_each_package()
+            self._write_root_package_json(asset_dir / "package.json", package_jsons)
 
             release_mode = self._get_release_mode()
             module_info = self._get_module_info()
