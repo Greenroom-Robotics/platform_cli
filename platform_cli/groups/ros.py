@@ -38,7 +38,7 @@ class Ros(PlatformCliGroup):
 
             echo("Building packages...", "green")
             call(
-                f"colcon build --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}"
+                f"colcon build --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} --paths * {args_str}"
             )
 
         @ros.command(name="test")
@@ -55,7 +55,7 @@ class Ros(PlatformCliGroup):
 
             echo("Testing packages...", "green")
             p = call(
-                f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}",
+                f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} --paths * {args_str}",
                 abort=False,
             )
             call(f"colcon test-result --all --verbose {args_str}", abort=False)
