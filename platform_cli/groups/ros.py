@@ -38,7 +38,7 @@ class Ros(PlatformCliGroup):
 
             echo("Building packages...", "green")
             call(
-                f"colcon build --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} --paths * {args_str}"
+                f"colcon build --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}"
             )
 
         @ros.command(name="test")
@@ -55,20 +55,24 @@ class Ros(PlatformCliGroup):
 
             echo("Testing packages...", "green")
             p = call(
-                f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} --paths * {args_str}",
+                f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}",
                 abort=False,
             )
             call(f"colcon test-result --all --verbose {args_str}", abort=False)
             exit(p.returncode)
 
         @ros.command(name="install_poetry_deps")
-        @click.option("--base-path", type=str, help="The path to where the packages are installed")
+        @click.option(
+            "--base-path", type=str, help="The path to where the packages are installed"
+        )
         def install_poetry_deps(base_path: Path):  # type: ignore
             """Installs the poetry deps for any python packages"""
 
             env = get_ros_env()
             base_path = (
-                Path(base_path) if base_path else Path(f"/opt/greenroom/{env['PLATFORM_MODULE']}")
+                Path(base_path)
+                if base_path
+                else Path(f"/opt/greenroom/{env['PLATFORM_MODULE']}")
             )
 
             echo(f"Installing all poetry deps in {base_path} using pip", "green")
