@@ -1,15 +1,16 @@
 FROM ghcr.io/greenroom-robotics/ros_builder:humble-latest
 
-# Create the package_manifests by deleting everything other than pyproject.toml, poetry.lock and package.xml
+# Create the package_manifests by deleting everything other than package.xml
 WORKDIR /package_manifests
 COPY ./ ./
 RUN sudo chown ros:ros .
-RUN sudo find . -regextype egrep -not -regex '.*/(pyproject\.toml|poetry\.lock|package\.xml)$' -type f -delete
+RUN sudo find . -regextype egrep -not -regex '.*/(package\.xml)$' -type f -delete
 RUN sudo find . -type d -empty -delete
 
 FROM ghcr.io/greenroom-robotics/ros_builder:humble-latest
+
 ARG API_TOKEN_GITHUB
-ARG PLATFORM_MODULE
+ARG PLATFORM_MODULE="platform_module"
 
 ENV GHCR_PAT=$API_TOKEN_GITHUB
 ENV PLATFORM_MODULE=$PLATFORM_MODULE
@@ -19,12 +20,11 @@ RUN --mount=type=cache,target=/home/ros/.cache/pip,sharing=locked \
   sudo chown -R ros:ros /home/ros/.cache/pip
 RUN pip install git+https://github.com/Greenroom-Robotics/platform_cli.git@main
 
-WORKDIR /home
-
+WORKDIR /home/package_manifests
 RUN platform pkg setup
-COPY --from=0 /package_manifests ./package_manifests
+COPY --from=0 /package_manifests .
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-  cd package_manifests && platform pkg install-deps
+  platform pkg install-deps
 
 WORKDIR /home/ros/${PLATFORM_MODULE}
 
