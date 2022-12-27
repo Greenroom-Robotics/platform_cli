@@ -12,6 +12,8 @@ FROM ghcr.io/greenroom-robotics/ros_builder:humble-latest
 ARG API_TOKEN_GITHUB
 ARG PLATFORM_MODULE="platform_module"
 
+LABEL org.opencontainers.image.source=https://github.com/Greenroom-Robotics/${PLATFORM_MODULE}
+
 ENV GHCR_PAT=$API_TOKEN_GITHUB
 ENV PLATFORM_MODULE=$PLATFORM_MODULE
 
