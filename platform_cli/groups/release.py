@@ -40,7 +40,7 @@ class ModuleInfo:
 
 def get_releaserc(changelog: bool, public: bool = False):
     RELEASERC = {
-        "branches": ["main", {"name": "alpha", "prerelease": True}],
+        "branches": ["main", "master" {"name": "alpha", "prerelease": True}],
         "plugins": [
             ["@semantic-release/commit-analyzer", {"preset": "conventionalcommits"}],
             [
