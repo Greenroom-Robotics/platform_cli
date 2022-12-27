@@ -24,6 +24,11 @@ class ReleaseMode(Enum):
     MULTI = "MULTI"
 
 
+class Architecture(str, Enum):
+    AMD64 = "amd64"
+    ARM64 = "arm64"
+
+
 @dataclass
 class PackageInfo:
     package_path: Path
@@ -38,8 +43,16 @@ class ModuleInfo:
     platform_module_name: str
 
 
-def get_releaserc(changelog: bool, public: bool = False):
-    RELEASERC = {
+def get_releaserc(changelog: bool, public: bool = False, arch: List[Architecture] = []):
+    """
+    Returns the releaserc with the plugins configured according to the arguments
+    """
+    prepare_cmd = "platform release deb-prepare --version ${nextRelease.version}" + "".join(
+        [f" --arch {a.value}" for a in arch]
+    )
+    publish_cmd = f"platform release deb-publish --public {public}"
+
+    releaserc = {
         "branches": ["main", "master", {"name": "alpha", "prerelease": True}],
         "plugins": [
             ["@semantic-release/commit-analyzer", {"preset": "conventionalcommits"}],
@@ -51,8 +64,8 @@ def get_releaserc(changelog: bool, public: bool = False):
             [
                 "@semantic-release/exec",
                 {
-                    "prepareCmd": "platform release deb-prepare --version ${nextRelease.version}",
-                    "publishCmd": f"platform release deb-publish --public {public}",
+                    "prepareCmd": prepare_cmd,
+                    "publishCmd": publish_cmd,
                 },
             ],
             [
@@ -63,14 +76,14 @@ def get_releaserc(changelog: bool, public: bool = False):
     }
     if changelog:
         return {
-            **RELEASERC,
+            **releaserc,
             "plugins": [
-                *RELEASERC["plugins"],
+                *releaserc["plugins"],
                 ["@semantic-release/git", {"assets": ["CHANGELOG.md"]}],
             ],
         }
 
-    return RELEASERC
+    return releaserc
 
 
 class Release(PlatformCliGroup):
@@ -225,12 +238,29 @@ class Release(PlatformCliGroup):
             platform_module_name=platform_module_name,
         )
 
+    def _get_docker_image_name_with_digest(
+        self, image_name: str, image_manifests: Manifest, architecture: Architecture
+    ) -> str:
+        """Returns the digest for a docker image given an architecture"""
+        if image_manifests.manifests is None:
+            # If there are no manifests, then there is only one image so we don't need the digest
+            return image_name
+
+        # Find the image for the platform and archicture
+        image_for_docker_platform = next(
+            manifest
+            for manifest in image_manifests.manifests
+            if manifest.platform and manifest.platform.architecture == architecture.value
+        )
+
+        return f"{image_name}@{image_for_docker_platform.digest}"
+
     def _build_deb_in_docker(
         self,
         version: str,
         package_info: PackageInfo,
         docker_image_name: str,
-        architecture: str,
+        architecture: Architecture,
         image_manifests: Manifest,
     ):
         """
@@ -238,19 +268,14 @@ class Release(PlatformCliGroup):
         The volume is mounted so we have access to the created deb file
         """
         echo(
-            f"Building {package_info.package_name} .deb for {architecture}",
+            f"Building {package_info.package_name} .deb for {architecture.value}",
             group_start=True,
         )
-        manifests = image_manifests.manifests or []
-
-        # Find the image for the platform and archicture
-        image_for_docker_platform = next(
-            manifest
-            for manifest in manifests
-            if manifest.platform and manifest.platform.architecture == architecture
+        docker_image_name_with_digest = self._get_docker_image_name_with_digest(
+            docker_image_name, image_manifests, architecture
         )
-        echo(f"Docker image manifest {image_for_docker_platform}", "blue")
-        docker_plaform = f"linux/{architecture}"
+
+        docker_plaform = f"linux/{architecture.value}"
 
         package_relative_to_platform_module = package_info.package_path.relative_to(
             package_info.platform_module_path
@@ -269,7 +294,7 @@ class Release(PlatformCliGroup):
         os.chmod(host_debs_path, 0o777)
 
         docker.run(
-            f"{docker_image_name}@{image_for_docker_platform.digest}",
+            docker_image_name_with_digest,
             [
                 "/bin/bash",
                 "-c",
@@ -331,16 +356,24 @@ class Release(PlatformCliGroup):
             help="Should this package be published to the public PPA",
             default=False,
         )
+        @click.option(
+            "--arch",
+            type=click.Choice(Architecture),  # type: ignore
+            help="The architecture to build for. OS will be linux. eg) amd64, arm64",
+            default=[Architecture.AMD64, Architecture.ARM64],
+            multiple=True,
+        )
         @click.argument(
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, public: bool, args: List[str]):  # type: ignore
+        def create(changelog: bool, public: bool, arch: List[Architecture], args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
 
             # Create the releaserc file
-            releaserc = get_releaserc(changelog, public)
+            # We configure this based on the above arguments which is pretty hacky but maybe nicer than environment variables
+            releaserc = get_releaserc(changelog, public, arch)
             dest_path_releaserc = Path.cwd() / ".releaserc"
             with open(dest_path_releaserc, "w+") as f:
                 f.write(json.dumps(releaserc, indent=4))
@@ -365,15 +398,15 @@ class Release(PlatformCliGroup):
         @click.option("--version", type=str, help="The version to call the debian", required=True)
         @click.option(
             "--arch",
-            type=str,
-            help="The archictecture to build for. OS will be linux. eg) linux/{architecture}",
-            default=["amd64", "arm64"],
+            type=click.Choice(Architecture),  # type: ignore
+            help="The architecture to build for. OS will be linux. eg) amd64, arm64",
+            default=[Architecture.AMD64, Architecture.ARM64],
             multiple=True,
         )
-        def deb_prepare(version: str, arch: List[str]):  # type: ignore
+        def deb_prepare(version: str, arch: List[Architecture]):  # type: ignore
             """Prepares the release by building the debian package inside a docker container"""
-            docker_platforms = [f"linux/{architecture}" for architecture in arch]
-            echo(f"Preparing to build .deb for {arch}", "blue")
+            docker_platforms = [f"linux/{a.value}" for a in arch]
+            echo(f"Preparing to build .deb for {[a.value for a in arch]}", "blue")
 
             if "API_TOKEN_GITHUB" not in os.environ:
                 raise Exception("API_TOKEN_GITHUB must be set")
