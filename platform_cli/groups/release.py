@@ -341,7 +341,13 @@ class Release(PlatformCliGroup):
             pass
 
         @release.command(name="setup")
-        def setup():  # type: ignore
+        @click.option(
+            "--package",
+            type=str,
+            help="Which package should we build. If not specified, all packages will be built",
+            default="",
+        )
+        def setup(package: str):  # type: ignore
             """Copies the package.json and yarn.lock into the root of the project and installs the deps"""
             echo("Setting up release...", "blue", group_start=True)
             echo(
@@ -351,6 +357,9 @@ class Release(PlatformCliGroup):
             asset_dir = Path(__file__).parent.parent / "assets"
 
             packages = find_packages(Path.cwd())
+            # If a package is specified, only build that package
+            packages = {package: packages[package]} if package in packages else packages
+
             self._write_docker_ignore()
             self._write_root_yarn_lock(asset_dir / "yarn.lock")
             self._write_package_jsons_for_each_package(packages)
