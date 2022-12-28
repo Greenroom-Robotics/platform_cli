@@ -12,7 +12,6 @@ from python_on_whales import docker
 from python_on_whales.components.buildx.imagetools.models import Manifest
 
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.groups.packaging import find_packages
 from platform_cli.helpers import echo, call, LogLevels
 
 DEBS_DIRECTORY = "debs"
@@ -93,6 +92,29 @@ def get_releaserc(
         }
 
     return releaserc
+
+
+def get_package_name_from_package_xml(package_xml: Path) -> str:
+    """
+    Returns the package name from the package.xml
+    """
+    tree = ET.parse(package_xml)
+    root = tree.getroot()
+    return root.find("name").text  # type: ignore
+
+
+def find_packages(path: Path) -> Dict[str, Path]:
+    """
+    Finds all the packages in the given path
+    """
+    package_xmls = path.glob("**/package.xml")
+
+    packages = {}
+    for package_xml in package_xmls:
+        package_name = get_package_name_from_package_xml(package_xml)
+        packages[package_name] = package_xml.parent
+
+    return packages
 
 
 class Release(PlatformCliGroup):

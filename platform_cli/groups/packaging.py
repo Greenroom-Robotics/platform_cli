@@ -21,7 +21,7 @@ def get_debs(p: Path) -> List[Path]:
     return list(p.glob("*.deb")) + list(p.glob("*.ddeb"))
 
 
-def find_packages(p: Path) -> Dict[str, Path]:
+def find_packages_with_colcon(p: Path) -> Dict[str, Path]:
     """Use colcon to find all packages in a workspace"""
 
     # TODO: use colcon python API instead of shelling out
@@ -107,7 +107,7 @@ class Packaging(PlatformCliGroup):
             """Installs rosdeps"""
             get_pkg_env()
             package_dir = Path.cwd()
-            packages = find_packages(package_dir)
+            packages = find_packages_with_colcon(package_dir)
             if package and package not in packages:
                 raise click.ClickException(f"Package '{package}' not found in workspace")
 
@@ -154,7 +154,7 @@ class Packaging(PlatformCliGroup):
 
             # need to make this more generic
             if src_dir.is_dir():
-                pkgs = find_packages(src_dir)
+                pkgs = find_packages_with_colcon(src_dir)
                 if pkgs and pkg_name in pkgs:
                     bloom_args += f" --src-dir={pkgs[pkg_name]}"
 
