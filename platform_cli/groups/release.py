@@ -2,9 +2,8 @@ import click
 import shutil
 
 import os
-from typing import List
+from typing import List, Optional, Dict
 from enum import Enum
-from glob import glob
 from pathlib import Path
 import xml.etree.ElementTree as ET
 import json
@@ -13,6 +12,7 @@ from python_on_whales import docker
 from python_on_whales.components.buildx.imagetools.models import Manifest
 
 from platform_cli.groups.base import PlatformCliGroup
+from platform_cli.groups.packaging import find_packages
 from platform_cli.helpers import echo, call, LogLevels
 
 DEBS_DIRECTORY = "debs"
@@ -43,13 +43,22 @@ class ModuleInfo:
     platform_module_name: str
 
 
-def get_releaserc(changelog: bool, public: bool = False, arch: List[Architecture] = []):
+def get_releaserc(
+    changelog: bool,
+    public: bool = False,
+    arch: List[Architecture] = [],
+    package: Optional[str] = None,
+):
     """
     Returns the releaserc with the plugins configured according to the arguments
     """
-    prepare_cmd = "platform release deb-prepare --version ${nextRelease.version}" + "".join(
-        [f" --arch {a.value}" for a in arch]
-    )
+    prepare_cmd_args = "--version ${nextRelease.version}"
+    for a in arch:
+        prepare_cmd_args += f" --arch {a.value}"
+    if package:
+        prepare_cmd_args += f" --package {package}"
+
+    prepare_cmd = f"platform release deb-prepare {prepare_cmd_args}"
     publish_cmd = f"platform release deb-publish --public {public}"
 
     releaserc = {
@@ -87,26 +96,27 @@ def get_releaserc(changelog: bool, public: bool = False, arch: List[Architecture
 
 
 class Release(PlatformCliGroup):
-    def get_package_xmls(self):
-        """Returns all package.xmls ignoring those inside node_modules"""
-        return [Path(p) for p in Path.cwd().glob("**/package.xml") if "node_modules" not in str(p)]
-
-    def _write_root_package_json(self, src: Path, package_jsons: List[Path]):
+    def _write_root_package_json(self, src: Path, packages: Dict[str, Path]):
         """Writes the root package.json file"""
         dest = Path.cwd() / "package.json"
         with open(src) as f:
-            # Set the package_name to be the package.xml package name or the name of the cwd
             package_json = json.load(f)
-            package_xml_path = Path.cwd() / "package.xml"
-            package_name = (
-                self._get_package_name_from_package_xml(package_xml_path)
-                if package_xml_path.exists()
-                else Path.cwd().name
+
+            # If there is a package.xml in the root directory, use that as the package name
+            package_name = next(
+                (
+                    package_name
+                    for package_name, package_path in packages.items()
+                    if package_path == Path.cwd()
+                ),
+                "platform_module",
             )
-            # The package name is the name of the package.xml
             package_json["name"] = package_name
+
             # The workspaces are the parent directories of the package.jsons
-            package_json["workspaces"] = [str(p.parent) for p in package_jsons]
+            package_json["workspaces"] = [
+                str(package_path) for package_name, package_path in packages.items()
+            ]
             with open(dest, "w") as f:
                 json.dump(package_json, f, indent=4)
 
@@ -174,24 +184,17 @@ class Release(PlatformCliGroup):
         package_name: str = root.find("name").text  # type: ignore
         return package_name
 
-    def _generate_package_jsons_for_each_package(self):
+    def _write_package_jsons_for_each_package(self, packages: Dict[str, Path]):
         """
         This will generate a fake package.json next to any package.xml.
         This is done as a hack so semantic-release can be used to release the package.
         """
-        package_xmls = self.get_package_xmls()
+        echo(f"Total found: {len(packages.items())}", "blue")
 
-        echo(f"Total found: {len(package_xmls)}", "blue")
-
-        package_jsons: List[Path] = []
-        for package_xml_path in package_xmls:
-            package_name = self._get_package_name_from_package_xml(package_xml_path)
-            package_json_path = Path(package_xml_path).parent / "package.json"
-            package_jsons.append(package_json_path)
+        for package_name, package_path in packages.items():
+            package_json_path = package_path / "package.json"
             if not package_json_path.exists():
                 self._write_package_json(package_json_path, package_name)
-
-        return package_jsons
 
     def _check_parents_for_file(self, filename: str) -> Path:
         """Checks each parent directory for a file"""
@@ -325,10 +328,11 @@ class Release(PlatformCliGroup):
             )
             asset_dir = Path(__file__).parent.parent / "assets"
 
+            packages = find_packages(Path.cwd())
             self._write_docker_ignore()
             self._write_root_yarn_lock(asset_dir / "yarn.lock")
-            package_jsons = self._generate_package_jsons_for_each_package()
-            self._write_root_package_json(asset_dir / "package.json", package_jsons)
+            self._write_package_jsons_for_each_package(packages)
+            self._write_root_package_json(asset_dir / "package.json", packages)
 
             release_mode = self._get_release_mode()
             module_info = self._get_module_info()
@@ -357,6 +361,12 @@ class Release(PlatformCliGroup):
             default=False,
         )
         @click.option(
+            "--package",
+            type=str,
+            help="Which package should we build. If not specified, all packages will be built",
+            default="",
+        )
+        @click.option(
             "--arch",
             type=click.Choice(Architecture),  # type: ignore
             help="The architecture to build for. OS will be linux. eg) amd64, arm64",
@@ -367,16 +377,21 @@ class Release(PlatformCliGroup):
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, public: bool, arch: List[Architecture], args: List[str]):  # type: ignore
+        def create(changelog: bool, public: bool, package: str, arch: List[Architecture], args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
 
-            # Create the releaserc file
-            # We configure this based on the above arguments which is pretty hacky but maybe nicer than environment variables
-            releaserc = get_releaserc(changelog, public, arch)
-            dest_path_releaserc = Path.cwd() / ".releaserc"
-            with open(dest_path_releaserc, "w+") as f:
-                f.write(json.dumps(releaserc, indent=4))
+            packages = find_packages(Path.cwd())
+
+            # Make sure the package exists if it was specified
+            if package and package not in packages:
+                raise click.ClickException(f"Package {package} not found in workspace")
+
+            # Create a releaserc for each package
+            for package_name, package_path in packages.items():
+                releaserc = get_releaserc(changelog, public, arch, package_name)
+                with open(package_path / ".releaserc", "w+") as f:
+                    f.write(json.dumps(releaserc, indent=4))
 
             # Run the correct release script in the package.json based off the release mode
             release_mode = self._get_release_mode()
@@ -403,7 +418,13 @@ class Release(PlatformCliGroup):
             default=[Architecture.AMD64, Architecture.ARM64],
             multiple=True,
         )
-        def deb_prepare(version: str, arch: List[Architecture]):  # type: ignore
+        @click.option(
+            "--package",
+            type=str,
+            help="Which package should we build. If not specified, all packages will be built",
+            default="",
+        )
+        def deb_prepare(version: str, arch: List[Architecture], package: str):  # type: ignore
             """Prepares the release by building the debian package inside a docker container"""
             docker_platforms = [f"linux/{a.value}" for a in arch]
             echo(f"Preparing to build .deb for {[a.value for a in arch]}", "blue")
@@ -467,6 +488,11 @@ class Release(PlatformCliGroup):
                 build_args={
                     "API_TOKEN_GITHUB": os.environ["API_TOKEN_GITHUB"],
                     "PLATFORM_MODULE": package_info.platform_module_name,
+                    # Note we pass the PACKAGE_NAME here so we can rosdep install and build only the package we want
+                    # If we don't pass this, it will try to build all packages in the workspace
+                    # When in MULTI mode, we want to build all packages without installing deps / building each package
+                    # So we DON'T pass this. It will just be an empty string
+                    "PACKAGE_NAME": package,
                 },
                 output={"type": "registry"},
             )

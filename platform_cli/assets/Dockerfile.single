@@ -1,5 +1,7 @@
 FROM ghcr.io/greenroom-robotics/ros_builder:humble-latest
+
 ARG API_TOKEN_GITHUB
+ARG PACKAGE_NAME
 ARG PLATFORM_MODULE
 
 ENV GHCR_PAT=$API_TOKEN_GITHUB
@@ -14,13 +16,13 @@ WORKDIR /home/ros/${PLATFORM_MODULE}
 COPY ./package.xml ./package.xml
 
 RUN platform pkg setup
-RUN platform pkg install-deps
+RUN platform pkg install-deps --package ${PACKAGE_NAME}
 
 COPY ./ ./
 RUN sudo chown -R ros:ros /home/ros/${PLATFORM_MODULE}
 
 RUN platform poetry install
-RUN source ${ROS_OVERLAY}/setup.sh && platform ros build
+RUN source ${ROS_OVERLAY}/setup.sh && platform ros build --package ${PACKAGE_NAME}
 RUN platform ros install_poetry_deps
 
 ENV ROS_OVERLAY /opt/greenroom/${PLATFORM_MODULE}

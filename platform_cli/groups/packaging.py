@@ -8,7 +8,6 @@ import os
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.helpers import call, stdout_call, get_pkg_env, echo
 
-
 GR_APT_REPO_PRIVATE = "Greenroom-Robotics/packages"
 GR_APT_REPO_PUBLIC = "Greenroom-Robotics/public_packages"
 GR_APT_REPO_PATH = Path.home() / ".gr/gr-packages"
@@ -22,17 +21,22 @@ def get_debs(p: Path) -> List[Path]:
     return list(p.glob("*.deb")) + list(p.glob("*.ddeb"))
 
 
-def find_packages(p: Path) -> Dict[str, str]:
-    # hack city.. hack hack city bitch
-    pkgs = {
-        k: v
-        for k, v in zip(
-            stdout_call("colcon list -n", cwd=p).split("\n"),
-            stdout_call("colcon list -p", cwd=p).split("\n"),
-        )
-        if k and v
-    }
-    return pkgs
+def find_packages(p: Path) -> Dict[str, Path]:
+    """Use colcon to find all packages in a workspace"""
+
+    # TODO: use colcon python API instead of shelling out
+    lines = stdout_call("colcon list", cwd=p)
+    packages = {}
+    for line in lines.splitlines():
+        # Line example:
+        # can_idl_generator       can_idl_generator       (ros.ament_cmake)
+        name, path, builder = line.split("\t")
+        if "node_modules" in path:
+            # Always ignore packages inside node_modules
+            continue
+        packages[name] = p / path
+
+    return packages
 
 
 def parse_version(version: str):
@@ -93,12 +97,24 @@ class Packaging(PlatformCliGroup):
             call("rosdep update")
 
         @pkg.command(name="install-deps")
-        def install_deps():  # type: ignore reportUnusedFunction
+        @click.option(
+            "--package",
+            type=str,
+            help="The package to install deps for (defaults to all)",
+            default=None,
+        )
+        def install_deps(package: str):  # type: ignore reportUnusedFunction
             """Installs rosdeps"""
             get_pkg_env()
-            pkg_dir = Path.cwd()
+            package_dir = Path.cwd()
+            packages = find_packages(package_dir)
+            if package and package not in packages:
+                raise click.ClickException(f"Package '{package}' not found in workspace")
+
+            # If we find a package with that name, only install the deps for that package
+            from_paths = packages[package] if package else package_dir
             refresh_deps.callback()  # type: ignore
-            call(f"rosdep install -y --rosdistro {get_ros_distro()} --from-paths {pkg_dir} -i")
+            call(f"rosdep install -y --rosdistro {get_ros_distro()} --from-paths {from_paths} -i")
 
         @pkg.command(name="get-sources")
         def get_sources():  # type: ignore reportUnusedFunction
@@ -140,7 +156,7 @@ class Packaging(PlatformCliGroup):
             if src_dir.is_dir():
                 pkgs = find_packages(src_dir)
                 if pkgs and pkg_name in pkgs:
-                    bloom_args += f" --src-dir={src_dir / pkgs[pkg_name]}"
+                    bloom_args += f" --src-dir={pkgs[pkg_name]}"
 
             if no_tests:
                 bloom_args += " --no-tests"

@@ -29,12 +29,16 @@ class Ros(PlatformCliGroup):
             pass
 
         @ros.command(name="build")
+        @click.option("--package", type=str, default=None, help="The package to build")
         @click.argument("args", nargs=-1)
-        def build(args: List[str]):  # type: ignore
+        def build(package: str, args: List[str]):  # type: ignore
             """Runs colcon build on all ROS package"""
 
             env = get_ros_env()
             args_str = " ".join(args)
+
+            if package:
+                args_str += f" --packages-select {package}"
 
             echo("Building packages...", "green")
             call(
@@ -43,8 +47,9 @@ class Ros(PlatformCliGroup):
 
         @ros.command(name="test")
         @click.option("--results-dir", type=str, default=None)
+        @click.option("--package", type=str, default=None, help="The package to test")
         @click.argument("args", nargs=-1)
-        def test(results_dir: str, args: List[str]):  # type: ignore
+        def test(results_dir: str, package: str, args: List[str]):  # type: ignore
             """Runs colcon test on all ROS packages"""
 
             env = get_ros_env()
@@ -53,9 +58,14 @@ class Ros(PlatformCliGroup):
             if results_dir:
                 args_str += f" --test-result-base {results_dir}"
 
+            # Some args only apply to colcon test
+            args_str_test = args_str
+            if package:
+                args_str_test += f" --packages-select {package}"
+
             echo("Testing packages...", "green")
             p = call(
-                f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}",
+                f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str_test}",
                 abort=False,
             )
             call(f"colcon test-result --all --verbose {args_str}", abort=False)
