@@ -27,7 +27,7 @@ WORKDIR /home/package_manifests
 RUN platform pkg setup
 COPY --from=0 /package_manifests .
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-  platform pkg install-deps --package ${PACKAGE_NAME}
+  platform pkg install-deps --package=${PACKAGE_NAME}
 
 WORKDIR /home/ros/${PLATFORM_MODULE}
 
@@ -35,7 +35,7 @@ COPY ./ ./
 RUN sudo chown -R ros:ros /home/ros/${PLATFORM_MODULE}
 RUN --mount=type=cache,target=/home/ros/.cache/pip,sharing=locked \
   platform poetry install
-RUN source ${ROS_OVERLAY}/setup.sh && platform ros build --package ${PACKAGE_NAME}
+RUN source ${ROS_OVERLAY}/setup.sh && platform ros build --package=${PACKAGE_NAME}
 RUN --mount=type=cache,target=/home/ros/.cache/pip,sharing=locked \
   platform ros install_poetry_deps
 

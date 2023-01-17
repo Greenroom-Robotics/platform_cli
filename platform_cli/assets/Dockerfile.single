@@ -16,13 +16,13 @@ WORKDIR /home/ros/${PLATFORM_MODULE}
 COPY ./package.xml ./package.xml
 
 RUN platform pkg setup
-RUN platform pkg install-deps --package ${PACKAGE_NAME}
+RUN platform pkg install-deps --package=${PACKAGE_NAME}
 
 COPY ./ ./
 RUN sudo chown -R ros:ros /home/ros/${PLATFORM_MODULE}
 
 RUN platform poetry install
-RUN source ${ROS_OVERLAY}/setup.sh && platform ros build --package ${PACKAGE_NAME}
+RUN source ${ROS_OVERLAY}/setup.sh && platform ros build --package=${PACKAGE_NAME}
 RUN platform ros install_poetry_deps
 
 ENV ROS_OVERLAY /opt/greenroom/${PLATFORM_MODULE}
