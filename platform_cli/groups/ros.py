@@ -68,8 +68,9 @@ class Ros(PlatformCliGroup):
                 f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str_test}",
                 abort=False,
             )
-            call(f"colcon test-result --all --verbose {args_str}", abort=False)
-            exit(p.returncode)
+            p2 = call(f"colcon test-result --all --verbose {args_str}", abort=False)
+
+            exit(max([p.returncode, p2.returncode]))
 
         @ros.command(name="install_poetry_deps")
         @click.option("--base-path", type=str, help="The path to where the packages are installed")
