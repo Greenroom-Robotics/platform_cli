@@ -198,6 +198,10 @@ class Packaging(PlatformCliGroup):
         )
         def apt_clone(public: bool):  # type: ignore reportUnusedFunction
             """Checks out the GR apt repo"""
+            if GR_APT_REPO_PATH.is_dir():
+                echo(f"Packages repo has already been cloned to {GR_APT_REPO_PATH}", "blue")
+                return
+
             github_repo_url = get_apt_repo_url(public)
             try:
                 call(f"git clone --filter=blob:none {github_repo_url} {GR_APT_REPO_PATH}")
