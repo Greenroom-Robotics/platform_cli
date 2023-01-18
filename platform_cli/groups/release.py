@@ -29,17 +29,17 @@ class Architecture(str, Enum):
 
 
 @dataclass
-class PackageInfo:
-    package_path: Path
-    package_name: str
+class ModuleInfo:
     platform_module_path: Path
     platform_module_name: str
 
 
 @dataclass
-class ModuleInfo:
-    platform_module_path: Path
-    platform_module_name: str
+class PackageInfo:
+    package_path: Path
+    package_name: str
+    package_version: str
+    module_info: ModuleInfo
 
 
 def check_parents_for_file(filename: str, path: Path=None) -> Path:
@@ -79,15 +79,12 @@ def get_package_info(package_path: Path=None) -> PackageInfo:
     platform_notifications/packages/notification_msgs
     """
     package_path = package_path if package_path else Path.cwd()
-    package_name = get_package_name_from_package_xml(package_path / "package.xml")
-#    package_name = package_path.name
-    module_info = get_module_info(package_path)
 
     return PackageInfo(
         package_path=package_path,
-        package_name=package_name,
-        platform_module_path=module_info.platform_module_path,
-        platform_module_name=module_info.platform_module_name,
+        package_name=get_package_name_from_package_xml(package_path / "package.xml"),
+        package_version=get_package_version_from_package_xml(package_path / "package.xml"),
+        module_info=get_module_info(package_path)
     )
 
 
@@ -181,7 +178,7 @@ def find_packages(path: Path=None) -> Dict[str, PackageInfo]:
 
 
 class Release(PlatformCliGroup):
-    def _write_root_package_json(self, src: Path, packages: Dict[str, Path]):
+    def _write_root_package_json(self, src: Path, packages: List[PackageInfo]):
         """Writes the root package.json file"""
         dest = Path.cwd() / "package.json"
         with open(src) as f:
@@ -190,9 +187,9 @@ class Release(PlatformCliGroup):
             # If there is a package.xml in the root directory, use that as the package name
             package_name = next(
                 (
-                    package_name
-                    for package_name, package_path in packages.items()
-                    if package_path == Path.cwd()
+                    package_info.package_name
+                    for package_info in packages
+                    if package_info.package_path == Path.cwd()
                 ),
                 "platform_module",
             )
@@ -200,7 +197,7 @@ class Release(PlatformCliGroup):
 
             # The workspaces are the parent directories of the package.jsons
             package_json["workspaces"] = [
-                str(package_path) for package_name, package_path in packages.items()
+                str(package_info.package_path) for package_info in packages
             ]
             with open(dest, "w") as f:
                 json.dump(package_json, f, indent=4)
@@ -269,17 +266,17 @@ class Release(PlatformCliGroup):
         package_name: str = root.find("name").text  # type: ignore
         return package_name
 
-    def _write_package_jsons_for_each_package(self, packages: Dict[str, Path]):
+    def _write_package_jsons_for_each_package(self, packages: List[PackageInfo]):
         """
         This will generate a fake package.json next to any package.xml.
         This is done as a hack so semantic-release can be used to release the package.
         """
-        echo(f"Total found: {len(packages.items())}", "blue")
+        echo(f"Total found: {len(packages)}", "blue")
 
-        for package_name, package_path in packages.items():
-            package_json_path = package_path / "package.json"
+        for package_info in packages:
+            package_json_path = package_info.package_path / "package.json"
             if not package_json_path.exists():
-                self._write_package_json(package_json_path, package_name)
+                self._write_package_json(package_json_path, package_info.package_name)
 
     def _get_docker_image_name_with_digest(
         self, image_name: str, image_manifests: Manifest, architecture: Architecture
@@ -321,12 +318,12 @@ class Release(PlatformCliGroup):
         docker_plaform = f"linux/{architecture.value}"
 
         package_relative_to_platform_module = package_info.package_path.relative_to(
-            package_info.platform_module_path
+            package_info.module_info.platform_module_path
         )
         host_debs_path = package_info.package_path / DEBS_DIRECTORY
         docker_working_dir = (
             Path("/home/ros/")
-            / package_info.platform_module_name
+            / package_info.module_info.platform_module_name
             / package_relative_to_platform_module
         )
         docker_debs_path = docker_working_dir / DEBS_DIRECTORY
@@ -375,14 +372,19 @@ class Release(PlatformCliGroup):
             asset_dir = Path(__file__).parent.parent / "assets"
 
             packages = find_packages(Path.cwd())
-            packages = {p.package_name: p.package_path for p in packages} # todo remove this
+
+            # Make sure the package exists if it was specified
+            if package and package not in packages:
+                raise click.ClickException(f"Package {package} not found in workspace")
+
             # If a package is specified, only build that package
-            packages = {package: packages[package]} if package in packages else packages
+            if package:
+                packages = {package: packages[package]}
 
             self._write_docker_ignore()
             self._write_root_yarn_lock(asset_dir / "yarn.lock")
-            self._write_package_jsons_for_each_package(packages)
-            self._write_root_package_json(asset_dir / "package.json", packages)
+            self._write_package_jsons_for_each_package(packages.values())
+            self._write_root_package_json(asset_dir / "package.json", packages.values())
 
             release_mode = self._get_release_mode()
             module_info = get_module_info()
@@ -488,7 +490,7 @@ class Release(PlatformCliGroup):
                 package_info = packages[package]
             else:
                 package_info = get_package_info()
-            docker_image_name = self._get_docker_image_name(package_info.platform_module_name)
+            docker_image_name = self._get_docker_image_name(package_info.module_info.platform_module_name)
 
             # Install qemu binfmt support for other architectures
             echo("Setting up QEMU...", group_start=True)
@@ -541,12 +543,12 @@ class Release(PlatformCliGroup):
 
             # Build the images for arm and amd using buildx
             docker.buildx.build(
-                package_info.platform_module_path,
+                package_info.module_info.platform_module_path,
                 platforms=docker_platforms,
                 tags=[docker_image_name],
                 build_args={
                     "API_TOKEN_GITHUB": os.environ["API_TOKEN_GITHUB"],
-                    "PLATFORM_MODULE": package_info.platform_module_name,
+                    "PLATFORM_MODULE": package_info.module_info.platform_module_name,
                     # Note we pass the PACKAGE_NAME here so we can rosdep install and build only the package we want
                     # If we don't pass this, it will try to build all packages in the workspace
                     # When in MULTI mode, we want to build all packages without installing deps / building each package
