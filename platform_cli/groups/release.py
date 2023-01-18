@@ -462,7 +462,7 @@ class Release(PlatformCliGroup):
                 call(f"yarn multi-semantic-release {args_str}")
 
         @release.command(name="deb-prepare")
-        @click.option("--version", type=str, help="The version to call the debian", required=True)
+        @click.option("--version", type=str, help="The version number to assign to the debian", required=False, default="")
         @click.option(
             "--arch",
             type=click.Choice(Architecture),  # type: ignore
@@ -565,7 +565,7 @@ class Release(PlatformCliGroup):
             for architecture in arch:
                 try:
                     self._build_deb_in_docker(
-                        version=version,
+                        version=version if version else package_info.package_version,
                         package_info=package_info,
                         docker_image_name=docker_image_name,
                         architecture=architecture,
