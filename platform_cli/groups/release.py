@@ -42,6 +42,55 @@ class ModuleInfo:
     platform_module_name: str
 
 
+def check_parents_for_file(filename: str, path: Path=None) -> Path:
+    """Checks each parent directory for a file"""
+    current_path = path if path else Path.cwd()
+    while current_path.exists():
+        file_path = current_path / filename
+        if file_path.exists():
+            return file_path.parent
+        current_path = current_path.parent
+
+    raise Exception(f"Could not find {filename} in any parent directory")
+
+
+def get_module_info(path: Path=None) -> ModuleInfo:
+    """
+    Returns the module info for the directory (or CWD).
+    """
+    platform_module_path = check_parents_for_file(".git", path)
+    platform_module_name = platform_module_path.name
+
+    return ModuleInfo(
+        platform_module_path=platform_module_path,
+        platform_module_name=platform_module_name,
+    )
+
+
+def get_package_info(package_path: Path=None) -> PackageInfo:
+    """
+    Returns the package info for the directory (or CWD if no path provided).
+    This assumes the cwd is a package. It will find out the name of the platform module.
+
+    File structure should be something like:
+    platform_module/packages/package_name
+
+    eg)
+    platform_notifications/packages/notification_msgs
+    """
+    package_path = package_path if package_path else Path.cwd()
+    package_name = get_package_name_from_package_xml(package_path / "package.xml")
+#    package_name = package_path.name
+    module_info = get_module_info(package_path)
+
+    return PackageInfo(
+        package_path=package_path,
+        package_name=package_name,
+        platform_module_path=module_info.platform_module_path,
+        platform_module_name=module_info.platform_module_name,
+    )
+
+
 def get_releaserc(
     changelog: bool,
     public: bool = False,
@@ -55,7 +104,7 @@ def get_releaserc(
     for a in arch:
         prepare_cmd_args += f" --arch {a.value}"
     if package:
-        prepare_cmd_args += f" --package {package}"
+        prepare_cmd_args += f" --package={package}"
 
     prepare_cmd = f"platform release deb-prepare {prepare_cmd_args}"
     publish_cmd = f"platform release deb-publish --public {public}"
@@ -98,21 +147,35 @@ def get_package_name_from_package_xml(package_xml: Path) -> str:
     """
     Returns the package name from the package.xml
     """
+    if not package_xml.exists():
+        return None
+
     tree = ET.parse(package_xml)
     root = tree.getroot()
     return root.find("name").text  # type: ignore
 
 
-def find_packages(path: Path) -> Dict[str, Path]:
+def get_package_version_from_package_xml(package_xml: Path) -> str:
+    """
+    Returns the package version from the package.xml
+    """
+    tree = ET.parse(package_xml)
+    root = tree.getroot()
+    return root.find("version").text  # type: ignore
+
+
+def find_packages(path: Path=None) -> Dict[str, PackageInfo]:
     """
     Finds all the packages in the given path
     """
+
+    path = path if path else Path.cwd()
     package_xmls = path.glob("**/package.xml")
 
     packages = {}
     for package_xml in package_xmls:
-        package_name = get_package_name_from_package_xml(package_xml)
-        packages[package_name] = package_xml.parent
+        package = get_package_info(package_xml.parent)
+        packages[package.package_name] = package
 
     return packages
 
@@ -218,51 +281,6 @@ class Release(PlatformCliGroup):
             if not package_json_path.exists():
                 self._write_package_json(package_json_path, package_name)
 
-    def _check_parents_for_file(self, filename: str) -> Path:
-        """Checks each parent directory for a file"""
-        current_path = Path.cwd()
-        while current_path.exists():
-            file_path = current_path / filename
-            if file_path.exists():
-                return file_path.parent
-            current_path = current_path.parent
-
-        raise Exception(f"Could not find {filename} in any parent directory")
-
-    def _get_package_info(self) -> PackageInfo:
-        """
-        Returns the package info for the current working directory.
-        This assumes the cwd is a package. It will find out the name of the platform module.
-
-        File structure should be something like:
-        platform_module/packages/package_name
-
-        eg)
-        platform_notifications/packages/notification_msgs
-        """
-        package_path = Path.cwd()
-        package_name = package_path.name
-        module_info = self._get_module_info()
-
-        return PackageInfo(
-            package_path=package_path,
-            package_name=package_name,
-            platform_module_path=module_info.platform_module_path,
-            platform_module_name=module_info.platform_module_name,
-        )
-
-    def _get_module_info(self) -> ModuleInfo:
-        """
-        Returns the module info for the current working directory.
-        """
-        platform_module_path = self._check_parents_for_file(".git")
-        platform_module_name = platform_module_path.name
-
-        return ModuleInfo(
-            platform_module_path=platform_module_path,
-            platform_module_name=platform_module_name,
-        )
-
     def _get_docker_image_name_with_digest(
         self, image_name: str, image_manifests: Manifest, architecture: Architecture
     ) -> str:
@@ -357,6 +375,7 @@ class Release(PlatformCliGroup):
             asset_dir = Path(__file__).parent.parent / "assets"
 
             packages = find_packages(Path.cwd())
+            packages = {p.package_name: p.package_path for p in packages} # todo remove this
             # If a package is specified, only build that package
             packages = {package: packages[package]} if package in packages else packages
 
@@ -366,7 +385,7 @@ class Release(PlatformCliGroup):
             self._write_root_package_json(asset_dir / "package.json", packages)
 
             release_mode = self._get_release_mode()
-            module_info = self._get_module_info()
+            module_info = get_module_info()
 
             # If a Dockerfile does not exist in the module root, create it
             docker_file_exists = (module_info.platform_module_path / "Dockerfile").exists()
@@ -419,9 +438,9 @@ class Release(PlatformCliGroup):
                 raise click.ClickException(f"Package {package} not found in workspace")
 
             # Create a releaserc for each package
-            for package_name, package_path in packages.items():
+            for package_name, package_info in packages.items():
                 releaserc = get_releaserc(changelog, public, arch, package_name)
-                with open(package_path / ".releaserc", "w+") as f:
+                with open(package_info.package_path / ".releaserc", "w+") as f:
                     f.write(json.dumps(releaserc, indent=4))
 
             # Run the correct release script in the package.json based off the release mode
@@ -463,17 +482,26 @@ class Release(PlatformCliGroup):
             if "API_TOKEN_GITHUB" not in os.environ:
                 raise Exception("API_TOKEN_GITHUB must be set")
 
-            package_info = self._get_package_info()
+            # resolve path of package
+            if package:
+                packages = find_packages()
+                package_info = packages[package]
+            else:
+                package_info = get_package_info()
             docker_image_name = self._get_docker_image_name(package_info.platform_module_name)
 
             # Install qemu binfmt support for other architectures
             echo("Setting up QEMU...", group_start=True)
-            docker.run(
-                "multiarch/qemu-user-static",
-                ["--reset", "-p", "yes", "--credential", "yes"],
-                privileged=True,
-                remove=True,
-            )
+            try:
+                docker.run(
+                    "multiarch/qemu-user-static",
+                    ["--reset", "-p", "yes", "--credential", "yes"],
+                    privileged=True,
+                    remove=True,
+                )
+            except:
+                # docker on ZFS causes this to error and there is no known fix
+                pass
 
             # Start a local registry on port 5000
             echo("Setting up local docker registry...", group_start=True, group_end=True)

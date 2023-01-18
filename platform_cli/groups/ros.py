@@ -38,7 +38,9 @@ class Ros(PlatformCliGroup):
             args_str = " ".join(args)
 
             if package:
-                args_str += f" --packages-select {package}"
+                # use --packages-up-to if the dependencies weren't installed
+                # use --packages-select if all the dependencies were rosdepped
+                args_str += f" --packages-up-to {package}"
 
             echo("Building packages...", "green")
             call(
