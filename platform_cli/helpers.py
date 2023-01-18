@@ -41,6 +41,10 @@ def get_pkg_env() -> PkgEnv:
     return cast(PkgEnv, os.environ)
 
 
+def is_ci_environment() -> bool:
+    return (os.environ.get("CI") or "").lower() == "true"
+
+
 def echo(
     msg: str = "",
     color: str = "blue",
@@ -49,8 +53,7 @@ def echo(
     level: Optional[LogLevels] = None,
 ):
     """Echo a message to the console, if we are in a github actions environment, log it to the github actions log"""
-    is_ci = (os.environ.get("CI") or "").lower() == "true"
-    if is_ci:
+    if is_ci_environment():
         if group_end:
             print("::endgroup::")
         if group_start:
