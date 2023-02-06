@@ -22,6 +22,26 @@ def get_ros_poetry_packages(path: Path) -> List[Path]:
     return ros_poetry_packages
 
 
+def collect_xunit_xmls(destination: str, package: str):  # type: ignore
+    """Collects all pytest, gtest XML files from the test results"""
+
+    package = "*" if not package else package
+
+    # pytest puts their results into build/pkg_name/pytest.xml
+    xmls = list((Path.cwd() / "build").glob(f"{package}/pytest.xml"))
+    # pytest based tests put their results into build/pkg_name/test_results/pkg_name/*.xunit.xml
+    xmls += list((Path.cwd() / "build").glob(f"{package}/test_results/{package}/*.xunit.xml"))
+    # gtest based tests put their results into build/pkg_name/test_results/pkg_name/*.gtest.xml
+    xmls += list((Path.cwd() / "build").glob(f"{package}/test_results/{package}/*.gtest.xml"))
+
+    for f in xmls:
+        pkg_name = f.parent.name
+        dest = Path(destination) / pkg_name
+        dest.mkdir(exist_ok=True)
+        echo(f"Copying {f.relative_to(Path.cwd())} to {dest}", "green")
+        call(f"cp --no-clobber {f} {dest}")
+
+
 class Ros(PlatformCliGroup):
     def create(self, cli: click.Group):
         @cli.group(help="CLI handlers associated with ROS packages")
@@ -49,8 +69,9 @@ class Ros(PlatformCliGroup):
 
         @ros.command(name="test")
         @click.option("--package", type=str, default=None, help="The package to test")
+        @click.option("--results-dir", type=str, default=None)
         @click.argument("args", nargs=-1)
-        def test(package: str, args: List[str]):  # type: ignore
+        def test(package: str, results_dir: str, args: List[str]):  # type: ignore
             """Runs colcon test on all ROS packages"""
 
             env = get_ros_env()
@@ -68,30 +89,10 @@ class Ros(PlatformCliGroup):
             )
             p2 = call(f"colcon test-result --all --verbose {args_str}", abort=False)
 
+            if results_dir:
+                collect_xunit_xmls(results_dir, package)
+
             exit(max([p.returncode, p2.returncode]))
-
-        @ros.command(name="collect-xunit-xmls")
-        @click.option("--package", type=str, default=None, help="The package to collect xunit XML files from")
-        @click.argument("destination", type=Path)
-        def collect_xunit_xmls(destination: str, package: str):  # type: ignore
-            """Collects all pytest, gtest XML files from the test results"""
-
-            package = "*" if not package else package
-
-            # pytest puts their results into build/pkg_name/pytest.xml
-            xmls = list((Path.cwd() / "build").glob(f"{package}/pytest.xml"))
-            # pytest based tests put their results into build/pkg_name/test_results/pkg_name/*.xunit.xml
-            xmls += list((Path.cwd() / "build").glob(f"{package}/test_results/{package}/*.xunit.xml"))
-            # gtest based tests put their results into build/pkg_name/test_results/pkg_name/*.gtest.xml
-            xmls += list((Path.cwd() / "build").glob(f"{package}/test_results/{package}/*.gtest.xml"))
-
-            for f in xmls:
-                pkg_name = f.parent.name
-                dest = Path(destination) / pkg_name
-                dest.mkdir(exist_ok=True)
-                echo(f"Copying {f.relative_to(Path.cwd())} to {dest}", "green")
-                call(f"cp --no-clobber {f} {dest}")
-
 
         @ros.command(name="install_poetry_deps")
         @click.option("--base-path", type=str, help="The path to where the packages are installed")
