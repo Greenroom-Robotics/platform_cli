@@ -2,7 +2,7 @@ import click
 import shutil
 
 import os
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Iterable
 from enum import Enum
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -42,7 +42,7 @@ class PackageInfo:
     module_info: ModuleInfo
 
 
-def check_parents_for_file(filename: str, path: Path=None) -> Path:
+def check_parents_for_file(filename: str, path: Optional[Path] = None) -> Path:
     """Checks each parent directory for a file"""
     current_path = path if path else Path.cwd()
     while current_path.exists():
@@ -54,7 +54,7 @@ def check_parents_for_file(filename: str, path: Path=None) -> Path:
     raise Exception(f"Could not find {filename} in any parent directory")
 
 
-def get_module_info(path: Path=None) -> ModuleInfo:
+def get_module_info(path: Optional[Path] = None) -> ModuleInfo:
     """
     Returns the module info for the directory (or CWD).
     """
@@ -67,7 +67,7 @@ def get_module_info(path: Path=None) -> ModuleInfo:
     )
 
 
-def get_package_info(package_path: Path=None) -> PackageInfo:
+def get_package_info(package_path: Optional[Path] = None) -> PackageInfo:
     """
     Returns the package info for the directory (or CWD if no path provided).
     This assumes the cwd is a package. It will find out the name of the platform module.
@@ -84,7 +84,7 @@ def get_package_info(package_path: Path=None) -> PackageInfo:
         package_path=package_path,
         package_name=get_package_name_from_package_xml(package_path / "package.xml"),
         package_version=get_package_version_from_package_xml(package_path / "package.xml"),
-        module_info=get_module_info(package_path)
+        module_info=get_module_info(package_path),
     )
 
 
@@ -145,7 +145,7 @@ def get_package_name_from_package_xml(package_xml: Path) -> str:
     Returns the package name from the package.xml
     """
     if not package_xml.exists():
-        return None
+        raise Exception(f"Could not find package.xml at {package_xml}")
 
     tree = ET.parse(package_xml)
     root = tree.getroot()
@@ -161,7 +161,7 @@ def get_package_version_from_package_xml(package_xml: Path) -> str:
     return root.find("version").text  # type: ignore
 
 
-def find_packages(path: Path=None) -> Dict[str, PackageInfo]:
+def find_packages(path: Optional[Path] = None) -> Dict[str, PackageInfo]:
     """
     Finds all the packages in the given path
     """
@@ -178,7 +178,7 @@ def find_packages(path: Path=None) -> Dict[str, PackageInfo]:
 
 
 class Release(PlatformCliGroup):
-    def _write_root_package_json(self, src: Path, packages: List[PackageInfo]):
+    def _write_root_package_json(self, src: Path, packages: Iterable[PackageInfo]):
         """Writes the root package.json file"""
         dest = Path.cwd() / "package.json"
         with open(src) as f:
@@ -266,13 +266,11 @@ class Release(PlatformCliGroup):
         package_name: str = root.find("name").text  # type: ignore
         return package_name
 
-    def _write_package_jsons_for_each_package(self, packages: List[PackageInfo]):
+    def _write_package_jsons_for_each_package(self, packages: Iterable[PackageInfo]):
         """
         This will generate a fake package.json next to any package.xml.
         This is done as a hack so semantic-release can be used to release the package.
         """
-        echo(f"Total found: {len(packages)}", "blue")
-
         for package_info in packages:
             package_json_path = package_info.package_path / "package.json"
             if not package_json_path.exists():
@@ -465,7 +463,13 @@ class Release(PlatformCliGroup):
                 call(f"yarn multi-semantic-release {args_str}")
 
         @release.command(name="deb-prepare")
-        @click.option("--version", type=str, help="The version number to assign to the debian", required=False, default="")
+        @click.option(
+            "--version",
+            type=str,
+            help="The version number to assign to the debian",
+            required=False,
+            default="",
+        )
         @click.option(
             "--arch",
             type=click.Choice(Architecture),  # type: ignore
@@ -493,7 +497,9 @@ class Release(PlatformCliGroup):
                 package_info = packages[package]
             else:
                 package_info = get_package_info()
-            docker_image_name = self._get_docker_image_name(package_info.module_info.platform_module_name)
+            docker_image_name = self._get_docker_image_name(
+                package_info.module_info.platform_module_name
+            )
 
             # Install qemu binfmt support for other architectures
             echo("Setting up QEMU...", group_start=True)
@@ -504,8 +510,9 @@ class Release(PlatformCliGroup):
                     privileged=True,
                     remove=True,
                 )
-            except:
+            except Exception as e:
                 # docker on ZFS causes this to error and there is no known fix
+                echo(f"QEMU already running: {e}", "yellow")
                 pass
 
             # Start a local registry on port 5000
