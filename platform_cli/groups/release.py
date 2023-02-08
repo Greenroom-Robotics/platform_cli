@@ -441,7 +441,10 @@ class Release(PlatformCliGroup):
 
             # Create a releaserc for each package
             for package_name, package_info in packages.items():
-                releaserc = get_releaserc(changelog, public, arch, package_name)
+                # If package is specified, only build that package, otherwise build all packages (None)
+                # This prevents us from building the docker image multiple times
+                package_to_build = package_name if package else None
+                releaserc = get_releaserc(changelog, public, arch, package_to_build)
                 with open(package_info.package_path / ".releaserc", "w+") as f:
                     f.write(json.dumps(releaserc, indent=4))
 
