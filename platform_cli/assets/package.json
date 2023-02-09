@@ -22,7 +22,7 @@
         "@semantic-release/git": "^10.0.1",
         "@semantic-release/release-notes-generator": "^10.0.3",
         "conventional-changelog-conventionalcommits": "^5.0.0",
-        "semantic-release": "^19.0.3",
+        "semantic-release": "https://github.com/Greenroom-Robotics/semantic-release.git#v19.0.5-patched",
         "@qiwi/multi-semantic-release": "^6.5.1",
         "@semantic-release/exec": "^6.0.3"
     }
