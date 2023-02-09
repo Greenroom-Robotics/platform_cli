@@ -2,7 +2,7 @@ import click
 import shutil
 
 import os
-from typing import List, Optional, Dict, Iterable
+from typing import List, Optional, Dict, Iterable, Any
 from enum import Enum
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -90,6 +90,7 @@ def get_package_info(package_path: Optional[Path] = None) -> PackageInfo:
 
 def get_releaserc(
     changelog: bool,
+    github_release: bool = True,
     public: bool = False,
     arch: List[Architecture] = [],
     package: Optional[str] = None,
@@ -97,45 +98,36 @@ def get_releaserc(
     """
     Returns the releaserc with the plugins configured according to the arguments
     """
-    prepare_cmd_args = "--version ${nextRelease.version}"
+    prepare_cmd_args = "--version=${nextRelease.version}"
     for a in arch:
-        prepare_cmd_args += f" --arch {a.value}"
+        prepare_cmd_args += f" --arch={a.value}"
     if package:
         prepare_cmd_args += f" --package={package}"
 
-    prepare_cmd = f"platform release deb-prepare {prepare_cmd_args}"
-    publish_cmd = f"platform release deb-publish --public {public}"
-
     releaserc = {
         "branches": ["main", "master", {"name": "alpha", "prerelease": True}],
-        "plugins": [
-            ["@semantic-release/commit-analyzer", {"preset": "conventionalcommits"}],
-            [
-                "@semantic-release/release-notes-generator",
-                {"preset": "conventionalcommits"},
-            ],
-            "@semantic-release/changelog",
-            [
-                "@semantic-release/exec",
-                {
-                    "prepareCmd": prepare_cmd,
-                    "publishCmd": publish_cmd,
-                },
-            ],
-            [
-                "@semantic-release/github",
-                {"assets": [{"path": "**/*.deb"}], "successComment": False},
-            ],
-        ],
+        "plugins": [],
     }
+
+    def add_plugin(plugin_name: str, plugin_config: Dict[str, Any]):
+        releaserc["plugins"].append([plugin_name, plugin_config])  # type: ignore
+
+    add_plugin("@semantic-release/commit-analyzer", {"preset": "conventionalcommits"})
+    add_plugin("@semantic-release/release-notes-generator", {"preset": "conventionalcommits"})
+    add_plugin("@semantic-release/changelog", {})
+    add_plugin(
+        "@semantic-release/exec",
+        {
+            "prepareCmd": f"platform release deb-prepare {prepare_cmd_args}",
+            "publishCmd": f"platform release deb-publish --public {public}",
+        },
+    )
+    if github_release:
+        add_plugin(
+            "@semantic-release/github", {"assets": [{"path": "**/*.deb"}], "successComment": False}
+        )
     if changelog:
-        return {
-            **releaserc,
-            "plugins": [
-                *releaserc["plugins"],
-                ["@semantic-release/git", {"assets": ["CHANGELOG.md"]}],
-            ],
-        }
+        add_plugin("@semantic-release/git", {"assets": ["CHANGELOG.md"]})
 
     return releaserc
 
@@ -405,6 +397,12 @@ class Release(PlatformCliGroup):
             default=True,
         )
         @click.option(
+            "--github-release",
+            type=bool,
+            help="Should we create a github release?",
+            default=True,
+        )
+        @click.option(
             "--public",
             type=bool,
             help="Should this package be published to the public PPA",
@@ -427,7 +425,7 @@ class Release(PlatformCliGroup):
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, public: bool, package: str, arch: List[Architecture], args: List[str]):  # type: ignore
+        def create(changelog: bool, github_release: bool, public: bool, package: str, arch: List[Architecture], args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
 
@@ -442,7 +440,9 @@ class Release(PlatformCliGroup):
                 # If package is specified, only build that package, otherwise build all packages (None)
                 # This prevents us from building the docker image multiple times
                 package_to_build = package_name if package else None
-                releaserc = get_releaserc(changelog, public, arch, package_to_build)
+                releaserc = get_releaserc(
+                    changelog, github_release, public, arch, package_to_build
+                )
                 with open(package_info.package_path / ".releaserc", "w+") as f:
                     f.write(json.dumps(releaserc, indent=4))
 
