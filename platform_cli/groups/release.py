@@ -431,7 +431,7 @@ class Release(PlatformCliGroup):
 
             if len(arch) == 1:
                 # If only one architecture is specified will append the architecture to the version
-                args_str += " --tagFormat \"${name}-" + arch[0].value + "@${version}\""
+                args_str += "--tag-format='${name}-" + arch[0].value + "@${version}'"
 
             packages = find_packages(Path.cwd())
 
