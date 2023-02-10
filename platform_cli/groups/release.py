@@ -429,6 +429,10 @@ class Release(PlatformCliGroup):
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
 
+            if len(arch) == 1:
+                # If only one architecture is specified will append the architecture to the version
+                args_str += " --tagFormat ${name}@${version}" + f"-{arch[0].value}"
+
             packages = find_packages(Path.cwd())
 
             # Make sure the package exists if it was specified
