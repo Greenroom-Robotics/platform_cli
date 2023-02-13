@@ -212,7 +212,7 @@ class Packaging(PlatformCliGroup):
         def apt_push():  # type: ignore reportUnusedFunction
             """Pushes to the GR apt repo"""
             call("git pull --rebase", cwd=GR_APT_REPO_PATH)
-            call("git push", cwd=GR_APT_REPO_PATH)
+            call("git push --force", cwd=GR_APT_REPO_PATH)
 
         @pkg.command(name="apt-update")
         def apt_update():  # type: ignore reportUnusedFunction
