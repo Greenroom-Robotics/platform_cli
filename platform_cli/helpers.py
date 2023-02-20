@@ -33,7 +33,7 @@ def get_ros_env() -> RosEnv:
     return cast(RosEnv, os.environ)
 
 
-def get_pkg_env(abort: bool=True) -> PkgEnv:
+def get_pkg_env(abort: bool = True) -> PkgEnv:
     if abort:
         for env in PkgEnv.__required_keys__:  # type: ignore
             if env not in os.environ:

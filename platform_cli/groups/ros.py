@@ -53,7 +53,6 @@ class Ros(PlatformCliGroup):
         @click.option("--debug-symbols", is_flag=True, show_default=True, default=False)
         @click.option("--no-base", is_flag=True, default=False)
         @click.argument("args", nargs=-1)
-
         def build(package: str, debug_symbols: bool, no_base: bool, args: List[str]):  # type: ignore
             """Runs colcon build on all ROS package"""
 
@@ -66,21 +65,21 @@ class Ros(PlatformCliGroup):
 
             if not no_base:
                 env = get_ros_env()
-                args_str += f" --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']}"
+                args_str += (
+                    f" --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']}"
+                )
 
             if debug_symbols:
-                args_str += f" --cmake-args -D CMAKE_BUILD_TYPE=RelWithDebInfo"
+                args_str += " --cmake-args -D CMAKE_BUILD_TYPE=RelWithDebInfo"
 
             echo("Building packages...", "green")
-            call(
-                f"colcon build {args_str}"
-            )
+            call(f"colcon build {args_str}")
 
         @ros.command(name="test")
         @click.option("--package", type=str, default=None, help="The package to test")
-        @click.option("--results-dir", type=str, default=None)
+        @click.option("--results-dir", type=Path, default=None)
         @click.argument("args", nargs=-1)
-        def test(package: str, results_dir: str, args: List[str]):  # type: ignore
+        def test(package: str, results_dir: Path, args: List[str]):  # type: ignore
             """Runs colcon test on all ROS packages"""
 
             env = get_ros_env()
@@ -98,7 +97,7 @@ class Ros(PlatformCliGroup):
             )
             p2 = call(f"colcon test-result --all --verbose {args_str}", abort=False)
 
-            if results_dir:
+            if results_dir and results_dir.exists():
                 collect_xunit_xmls(results_dir, package)
 
             exit(max([p.returncode, p2.returncode]))
