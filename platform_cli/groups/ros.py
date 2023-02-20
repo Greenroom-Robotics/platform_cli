@@ -22,7 +22,7 @@ def get_ros_poetry_packages(path: Path) -> List[Path]:
     return ros_poetry_packages
 
 
-def collect_xunit_xmls(destination: str, package: str):  # type: ignore
+def collect_xunit_xmls(destination: Path, package: str):  # type: ignore
     """Collects all pytest, gtest XML files from the test results"""
 
     package = "*" if not package else package
@@ -36,7 +36,7 @@ def collect_xunit_xmls(destination: str, package: str):  # type: ignore
 
     for f in xmls:
         pkg_name = f.parent.name
-        dest = Path(destination) / pkg_name
+        dest = destination / pkg_name
         dest.mkdir(exist_ok=True)
         echo(f"Copying {f.relative_to(Path.cwd())} to {dest}", "green")
         call(f"cp --no-clobber {f} {dest}")
