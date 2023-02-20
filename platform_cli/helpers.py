@@ -1,4 +1,4 @@
-from typing import TypedDict, cast, Optional, Dict
+from typing import TypedDict, cast, Optional, Dict, List
 import click
 import os
 from pathlib import Path
@@ -33,10 +33,11 @@ def get_ros_env() -> RosEnv:
     return cast(RosEnv, os.environ)
 
 
-def get_pkg_env() -> PkgEnv:
-    for env in PkgEnv.__required_keys__:  # type: ignore
-        if env not in os.environ:
-            raise click.ClickException(f"{env} environment variable must be set.")
+def get_pkg_env(abort: bool=True) -> PkgEnv:
+    if abort:
+        for env in PkgEnv.__required_keys__:  # type: ignore
+            if env not in os.environ:
+                raise click.ClickException(f"{env} environment variable must be set.")
 
     return cast(PkgEnv, os.environ)
 

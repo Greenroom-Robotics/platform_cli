@@ -50,11 +50,13 @@ class Ros(PlatformCliGroup):
 
         @ros.command(name="build")
         @click.option("--package", type=str, default=None, help="The package to build")
+        @click.option("--debug-symbols", is_flag=True, show_default=True, default=False)
+        @click.option("--no-base", is_flag=True, default=False)
         @click.argument("args", nargs=-1)
-        def build(package: str, args: List[str]):  # type: ignore
+
+        def build(package: str, debug_symbols: bool, no_base: bool, args: List[str]):  # type: ignore
             """Runs colcon build on all ROS package"""
 
-            env = get_ros_env()
             args_str = " ".join(args)
 
             if package:
@@ -62,9 +64,16 @@ class Ros(PlatformCliGroup):
                 # use --packages-select if all the dependencies were rosdepped
                 args_str += f" --packages-select {package}"
 
+            if not no_base:
+                env = get_ros_env()
+                args_str += f" --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']}"
+
+            if debug_symbols:
+                args_str += f" --cmake-args -D CMAKE_BUILD_TYPE=RelWithDebInfo"
+
             echo("Building packages...", "green")
             call(
-                f"colcon build --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str}"
+                f"colcon build {args_str}"
             )
 
         @ros.command(name="test")
