@@ -35,6 +35,11 @@ install  Runs poetry install on all poetry packages
 test     Runs pytest on all poetry packages
 ```
 
+#### `platform py`
+```
+test  Runs pytest on the selected package/path
+```
+
 #### `platform pkg`
 
 ```bash
