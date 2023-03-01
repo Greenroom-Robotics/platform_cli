@@ -450,6 +450,9 @@ class Release(PlatformCliGroup):
             release_mode = self._get_release_mode()
 
             if release_mode == ReleaseMode.SINGLE:
+                if len(arch) == 1:
+                    # If only one architecture is specified will append the architecture to the version
+                    args_str += "--tag-format='{version}-" + arch[0].value + "'"
                 echo(
                     "Release mode: SINGLE, running semantic-release for root package",
                     "blue",
