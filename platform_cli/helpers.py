@@ -126,7 +126,8 @@ def call(
     abort: bool = True,
     sudo: bool = False,
     env: Dict[str, str] = {},
-):
+    retry: int = 0,
+) -> subprocess.CompletedProcess[bytes]:
     if project_root_cwd and cwd:
         raise RuntimeError("Both 'cwd' and 'project_root_cwd' are set")
 
@@ -135,7 +136,7 @@ def call(
         if cwd is None:
             raise RuntimeError("Could not find project root.")
 
-    env = {**os.environ, **env}
+    env_extended = {**os.environ, **env}
 
     if sudo:
         command = "sudo " + command
@@ -148,10 +149,18 @@ def call(
     )
     try:
         proc = subprocess.run(
-            command, shell=True, executable="/bin/bash", cwd=cwd, check=abort, env=env
+            command, shell=True, executable="/bin/bash", cwd=cwd, check=abort, env=env_extended
         )
+        return proc
     except subprocess.CalledProcessError as e:
-        print(e)
-        raise click.ClickException("Run failed")
-
-    return proc
+        if retry > 0:
+            click.echo(
+                click.style(
+                    f"Failed but retrying... {retry - 1} retry(s) left",
+                    fg="yellow",
+                )
+            )
+            return call(command, cwd, project_root_cwd, abort, sudo, env, retry - 1)
+        else:
+            print(e)
+            raise click.ClickException("Run failed")
