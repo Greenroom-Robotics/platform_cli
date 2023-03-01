@@ -429,10 +429,6 @@ class Release(PlatformCliGroup):
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
 
-            if len(arch) == 1:
-                # If only one architecture is specified will append the architecture to the version
-                args_str += "--tag-format='${name}@${version}-" + arch[0].value + "'"
-
             packages = find_packages(Path.cwd())
 
             # Make sure the package exists if it was specified
@@ -460,6 +456,10 @@ class Release(PlatformCliGroup):
                 )
                 call(f"yarn semantic-release {args_str}")
             else:
+                if len(arch) == 1:
+                    # If only one architecture is specified will append the architecture to the version
+                    args_str += "--tag-format='${name}@${version}-" + arch[0].value + "'"
+
                 echo(
                     "Release mode: MULTI, running multi-semantic-release for root package",
                     "blue",
