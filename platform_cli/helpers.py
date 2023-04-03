@@ -11,10 +11,6 @@ class RosEnv(TypedDict):
     ROS_OVERLAY: str
 
 
-class PkgEnv(TypedDict):
-    GHCR_PAT: str
-
-
 class LogLevels(Enum):
     WARNING = "warning"
     ERROR = "error"
@@ -31,15 +27,6 @@ def get_ros_env() -> RosEnv:
             raise click.ClickException(f"{env} environment variable must be set.")
 
     return cast(RosEnv, os.environ)
-
-
-def get_pkg_env(abort: bool = True) -> PkgEnv:
-    if abort:
-        for env in PkgEnv.__required_keys__:  # type: ignore
-            if env not in os.environ:
-                raise click.ClickException(f"{env} environment variable must be set.")
-
-    return cast(PkgEnv, os.environ)
 
 
 def is_ci_environment() -> bool:

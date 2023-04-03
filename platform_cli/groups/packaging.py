@@ -6,7 +6,7 @@ import shutil
 import os
 
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import call, stdout_call, get_pkg_env, echo
+from platform_cli.helpers import call, stdout_call, echo
 
 GR_APT_REPO_PRIVATE = "Greenroom-Robotics/packages"
 GR_APT_REPO_PUBLIC = "Greenroom-Robotics/public_packages"
@@ -115,7 +115,6 @@ class Packaging(PlatformCliGroup):
         )
         def install_deps(package: str):  # type: ignore reportUnusedFunction
             """Installs rosdeps"""
-            get_pkg_env()
             package_dir = Path.cwd()
             packages = find_packages_with_colcon(package_dir)
             if package and package not in packages:

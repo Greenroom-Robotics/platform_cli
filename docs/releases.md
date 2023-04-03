@@ -15,7 +15,6 @@ Make sure you export the following environment variables:
 ```bash
 export GITHUB_TOKEN=<github token>
 export API_TOKEN_GITHUB=<github token>
-export GHCR_PAT=<github token>
 export CI=true # So semantic-release actually runs
 ```
 
