@@ -67,14 +67,24 @@ class Packaging(PlatformCliGroup):
             pass
 
         @pkg.command(name="setup")
-        def setup():  # type: ignore reportUnusedFunction
+        @click.option(
+            "--auth",
+            type=bool,
+            default=True,
+            help="If true, will setup the apt auth file",
+        )
+        def setup(auth: bool):  # type: ignore reportUnusedFunction
             """Sets up the greenroom apt and rosdep lists"""
             call(
-                f"curl -s https://{os.environ['GHCR_PAT']}@raw.githubusercontent.com/Greenroom-Robotics/rosdistro/main/scripts/setup-rosdep.sh | bash -s"
+                f"curl -s https://{os.environ['API_TOKEN_GITHUB']}@raw.githubusercontent.com/Greenroom-Robotics/rosdistro/main/scripts/setup-rosdep.sh | bash -s"
             )
             call(
-                f"curl -s https://{os.environ['GHCR_PAT']}@raw.githubusercontent.com/Greenroom-Robotics/packages/main/scripts/setup-apt.sh | bash -s"
+                f"curl -s https://{os.environ['API_TOKEN_GITHUB']}@raw.githubusercontent.com/Greenroom-Robotics/packages/main/scripts/setup-apt-list.sh | bash -s"
             )
+            if auth:
+                call(
+                    f"curl -s https://{os.environ['API_TOKEN_GITHUB']}@raw.githubusercontent.com/Greenroom-Robotics/packages/main/scripts/setup-apt-auth.sh | bash -s"
+                )
             call(
                 "curl -s https://raw.githubusercontent.com/Greenroom-Robotics/public_packages/main/scripts/setup-apt.sh | bash -s"
             )
