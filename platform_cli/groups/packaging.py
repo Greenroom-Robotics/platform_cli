@@ -25,7 +25,7 @@ def find_packages_with_colcon(p: Path) -> Dict[str, Path]:
     """Use colcon to find all packages in a workspace"""
 
     # TODO: use colcon python API instead of shelling out
-    lines = stdout_call("colcon list", cwd=p)
+    lines = stdout_call("colcon --log-base=/dev/null list", cwd=p)
     packages = {}
     for line in lines.splitlines():
         # Line example:
