@@ -75,6 +75,12 @@ class Packaging(PlatformCliGroup):
         )
         def setup(auth: bool):  # type: ignore reportUnusedFunction
             """Sets up the greenroom apt and rosdep lists"""
+            if not os.environ.get("API_TOKEN_GITHUB"):
+                raise click.ClickException(
+                    "API_TOKEN_GITHUB environment variable not set. "
+                    "Please set this to a github personal access token with the 'repo' and 'package:read' scope."
+                )
+
             call(
                 f"curl -s https://{os.environ['API_TOKEN_GITHUB']}@raw.githubusercontent.com/Greenroom-Robotics/rosdistro/main/scripts/setup-rosdep.sh | bash -s"
             )
