@@ -1,5 +1,5 @@
 from glob import glob
-from typing import List
+from typing import List, Optional
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 import click
@@ -7,7 +7,7 @@ import click
 from git import Repo
 from platform_cli.groups.release import find_packages
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import get_env, PkgEnv, echo, call
+from platform_cli.helpers import get_env, echo, call
 
 from python_on_whales import docker
 
@@ -18,6 +18,13 @@ class Workspace(PlatformCliGroup):
         def ws():
             pass
 
+        @ws.command(name="setup-proxy")
+        @click.argument("container_name", type=str)
+        def base_image():
+
+            setup_proxy().callback()
+            
+        
         @ws.command(name="setup-proxy")
         @click.argument("container_name", type=str)
         def setup_proxy(container_name: str):  # type: ignore
@@ -43,14 +50,17 @@ class Workspace(PlatformCliGroup):
                 container.copy_to(f.name, "/etc/apt/apt.conf.d/01proxy")
 
         @ws.command(name="container")
-        @click.option("--base", type=str, default=None, help="The base image to use")
+        @click.option("--base-image", type=str, default=None, help="The base image to use")
+        @click.option("--path", type=str, multiple=True, help="Paths to compile in the workspace")
         # @click.option("--debug-symbols", is_flag=True, show_default=True, default=False)
         # @click.option("--no-base", is_flag=True, default=False)
         # @click.argument("args", nargs=-1)
-        def container(base_image: Optional[str]):  # type: ignore
+        def container(base_image: Optional[str], path: List[str]):  # type: ignore
             """Creates a container for the workspace"""
 
-            # env = get_env(PkgEnv)
+            system_platform_path = Path.home() / "work/platform"
+            container_platform_path = Path("/platform")
+            container_home_path = Path("/home/ros")
             workspace_path = Path.cwd()
             container_name = f"platform_ws_{workspace_path.name}"
 
@@ -63,38 +73,39 @@ class Workspace(PlatformCliGroup):
 
             echo(f"Creating container '{container_name}' for workspace {workspace_path}...", "green")
 
-            workspace_volume = docker.volume.create(f"{container_name}_src", "local",
-                                                    options={
-                                                        "type": "overlay",
-                                                        "o": f"""lowerdir={workspace_path / "src"},upperdir={workspace_path / "workdir"},workdir={workspace_path / "tmp"}""",
-                                                        "device": "overlay"
-                                                    })
+            # workspace_volume = docker.volume.create(f"{container_name}_src", "local",
+            #                                         options={
+            #                                             "type": "overlay",
+            #                                             "o": f"""lowerdir={workspace_path / "src"},upperdir={workspace_path / "workdir"},workdir={workspace_path / "tmp"}""",
+            #                                             "device": "overlay"
+            #                                         })
 
             container = docker.run(base_image,
                                    ["tail", "-f", "/dev/null"],
                 name=container_name,
                 volumes=[
                 # (workspace_path / "src", "/home/ros/ws/src",  "ro"),
-                         (Path.home() / "work/platform", "/platform", "rw"),
-                          (workspace_volume, "/ws_src")],
-                workdir="/home/ros",
-                envs=env,
+                         (system_platform_path, container_platform_path, "ro"),
+                        #   (workspace_volume, "/ws_src")
+                          ],
+                workdir=container_home_path,
+                # envs=env,
                 detach=True, remove=False
             )
 
             echo(f"Container '{container_name}' created", "green")
-            container.execute(["mkdir", "ws"], tty=True)  # , "chown", "ros:ros", "/home/ros/ws"
-            container.execute(["ln", "-s", "/ws_src", "ws/src"], tty=True)
-            # container.execute(["sudo", "chown", "ros:ros", "/home/ros/ws"], tty=True)
+            container.execute(["mkdir", "-p", "ws/src"], tty=True)  # , "chown", "ros:ros", "/home/ros/ws"
 
-            container.execute(["pip", "install", "/platform/tools/platform_cli"], tty=True)
+            for p in [Path(x) for x in path]:
+                p_rel = container_platform_path / p.relative_to(system_platform_path)
+                container.execute(["ln", "-s", str(p_rel), "ws/src"], tty=True)
+
+            container.execute(["pip", "install", str(container_platform_path / "tools/platform_cli")], tty=True)
             container.execute(["platform", "pkg", "setup"], tty=True)
             # container.execute(["platform", "pkg", "refresh-deps"], tty=True)
             
             # how do we source the setup.bash files?
             # container.execute(["colcon", "build"], tty=True)
-            # can_adapter@  
-            #    platform_can@   platform_control@ 
 
             # container.stop()
 
@@ -105,13 +116,6 @@ class Workspace(PlatformCliGroup):
 
             workspace_path = Path.cwd()
             packages = find_packages(workspace_path / "src")
-
-# TODO follow symlinks
-# In [33]: p =  Path('/home/russ/work/is-workspace/src/platform_can')
-# In [34]: p.is_symlink()
-# Out[34]: True
-# In [35]: p.readlink()
-# Out[35]: PosixPath('/home/russ/work/platform/packages/platform_can')
 
             print(packages)
             for name, info in packages.items():
