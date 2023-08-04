@@ -1,4 +1,4 @@
-FROM ghcr.io/greenroom-robotics/ros_builder:humble-latest
+FROM ghcr.io/greenroom-robotics/ros_builder:iron-latest
 
 # Create the package_manifests by deleting everything other than package.xml
 WORKDIR /package_manifests
@@ -7,7 +7,7 @@ RUN sudo chown ros:ros .
 RUN sudo find . -regextype egrep -not -regex '.*/(package\.xml)$' -type f -delete
 RUN sudo find . -type d -empty -delete
 
-FROM ghcr.io/greenroom-robotics/ros_builder:humble-latest
+FROM ghcr.io/greenroom-robotics/ros_builder:iron-latest
 
 ARG API_TOKEN_GITHUB
 ARG PACKAGE_NAME
