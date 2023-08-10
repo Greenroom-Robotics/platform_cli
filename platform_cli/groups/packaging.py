@@ -220,6 +220,7 @@ class Packaging(PlatformCliGroup):
             github_repo_url = get_apt_repo_url(public)
             try:
                 call(f"git clone --filter=blob:none {github_repo_url} {GR_APT_REPO_PATH}")
+                call(f"git lfs install", cwd=GR_APT_REPO_PATH)
             except Exception as e:
                 raise click.ClickException(f"Error cloning apt repo: {e}")
 
