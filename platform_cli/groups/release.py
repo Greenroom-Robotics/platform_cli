@@ -124,7 +124,7 @@ def get_releaserc(
     )
     if github_release:
         add_plugin(
-            "@semantic-release/github", {"assets": [{"path": "**/*.deb"}], "successComment": False}
+            "@semantic-release/github", {"assets": [{"path": "**/*.deb"}, {"path": "**/*.ddeb"}], "successComment": False}
         )
     if changelog:
         add_plugin("@semantic-release/git", {"assets": ["CHANGELOG.md"]})
