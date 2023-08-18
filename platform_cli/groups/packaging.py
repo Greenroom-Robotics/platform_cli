@@ -18,7 +18,9 @@ def get_ros_distro():
 
 
 def get_debs(p: Path) -> List[Path]:
-    return list(p.glob("*.deb")) + list(p.glob("*.ddeb"))
+    return list(
+        p.glob("*.deb")
+    )  # + list(p.glob("*.ddeb")) debug symbols are blowing up the repo size
 
 
 def find_packages_with_colcon(p: Path) -> Dict[str, Path]:
@@ -230,7 +232,6 @@ class Packaging(PlatformCliGroup):
                 if sparse:
                     clone_command += " --sparse"
                 call(f"{clone_command} {github_repo_url} {GR_APT_REPO_PATH}")
-                call("git lfs install", cwd=GR_APT_REPO_PATH)
             except Exception as e:
                 raise click.ClickException(f"Error cloning apt repo: {e}")
 
