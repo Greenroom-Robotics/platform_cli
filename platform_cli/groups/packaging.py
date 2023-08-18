@@ -211,7 +211,14 @@ class Packaging(PlatformCliGroup):
             help="Should this package be published to the public PPA",
             default=False,
         )
-        def apt_clone(public: bool):  # type: ignore reportUnusedFunction
+        @click.option(
+            "--sparse",
+            type=bool,
+            help="Should we do a sparse checkout of the apt repo",
+            default=False,
+            flag_value=True,
+        )
+        def apt_clone(public: bool, sparse: bool):  # type: ignore reportUnusedFunction
             """Checks out the GR apt repo"""
             if GR_APT_REPO_PATH.is_dir():
                 echo(f"Packages repo has already been cloned to {GR_APT_REPO_PATH}", "blue")
@@ -219,8 +226,11 @@ class Packaging(PlatformCliGroup):
 
             github_repo_url = get_apt_repo_url(public)
             try:
-                call(f"git clone --filter=blob:none {github_repo_url} {GR_APT_REPO_PATH}")
-                call(f"git lfs install", cwd=GR_APT_REPO_PATH)
+                clone_command = "git clone --filter=blob:none --depth=1"
+                if sparse:
+                    clone_command += " --sparse"
+                call(f"{clone_command} {github_repo_url} {GR_APT_REPO_PATH}")
+                call("git lfs install", cwd=GR_APT_REPO_PATH)
             except Exception as e:
                 raise click.ClickException(f"Error cloning apt repo: {e}")
 
@@ -248,8 +258,15 @@ class Packaging(PlatformCliGroup):
             call("git pull --rebase", cwd=GR_APT_REPO_PATH)
 
         @pkg.command(name="apt-add")
+        @click.option(
+            "--sparse",
+            type=bool,
+            help="Should we do a sparse add to the apt repo",
+            default=False,
+            flag_value=True,
+        )
         @click.argument("deb", type=click.Path(exists=True), required=False)
-        def apt_add(deb: str):  # type: ignore reportUnusedFunction
+        def apt_add(sparse: bool, deb: str):  # type: ignore reportUnusedFunction
             """Adds a .deb to the GR apt repo"""
 
             if not GR_APT_REPO_PATH:
@@ -264,7 +281,10 @@ class Packaging(PlatformCliGroup):
                 raise click.ClickException("No debs found.")
             for d in debs:
                 shutil.copy(d, GR_APT_REPO_PATH / "debian")
-                call(f"git add debian/{d.name}", cwd=GR_APT_REPO_PATH)
+                add_command = f"git add debian/{d.name}"
+                if sparse:
+                    add_command += " --sparse"
+                call(add_command, cwd=GR_APT_REPO_PATH)
 
             call(
                 f"git commit -a -m 'feat: add debian package: {' '.join(d.name for d in debs)}'",
