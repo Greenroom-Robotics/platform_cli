@@ -608,11 +608,11 @@ class Release(PlatformCliGroup):
             """Publishes the deb to the apt repo"""
             try:
                 echo("Publishing .deb to apt repo...", group_start=True)
-                call(f"platform pkg apt-clone --public {public} --sparse")
+                call(f"platform pkg apt-clone --public {public}")
 
                 debs_folder = Path.cwd() / DEBS_DIRECTORY
 
-                call("platform pkg apt-add --sparse", cwd=Path(debs_folder))
+                call("platform pkg apt-add", cwd=Path(debs_folder))
                 call("platform pkg apt-push")
                 echo(group_end=True)
             except Exception as e:
