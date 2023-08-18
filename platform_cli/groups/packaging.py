@@ -17,10 +17,8 @@ def get_ros_distro():
     return os.environ["ROS_DISTRO"]
 
 
-def get_debs(p: Path) -> List[Path]:
-    return list(
-        p.glob("*.deb")
-    )  # + list(p.glob("*.ddeb")) debug symbols are blowing up the repo size
+def get_debs(p: Path, debug_files: bool = False) -> List[Path]:
+    return list(p.glob("*.deb")) + list(p.glob("*.ddeb")) if debug_files else []
 
 
 def find_packages_with_colcon(p: Path) -> Dict[str, Path]:
@@ -190,7 +188,7 @@ class Packaging(PlatformCliGroup):
             # the .deb and .ddeb files are in the parent directory
             # move .deb/.ddeb files into the output folder
             Path(output).mkdir(parents=True, exist_ok=True)
-            debs = get_debs(Path.cwd().parent)
+            debs = get_debs(Path.cwd().parent, debug_files=True)
             echo(f"Moving {len(debs)} .deb / .ddeb files to {output}", "blue")
             if debs:
                 for d in debs:
@@ -276,16 +274,17 @@ class Packaging(PlatformCliGroup):
             if deb:
                 debs = [Path(deb)]
             else:
-                debs = get_debs(Path.cwd())
+                debs = get_debs(Path.cwd(), debug_files=False)
 
             if not debs:
                 raise click.ClickException("No debs found.")
             for d in debs:
+                echo(f"Copying {d} info {GR_APT_REPO_PATH / 'debian'}", "blue")
                 shutil.copy(d, GR_APT_REPO_PATH / "debian")
-                add_command = f"git add debian/{d.name}"
+                add_command = "git add"
                 if sparse:
                     add_command += " --sparse"
-                call(add_command, cwd=GR_APT_REPO_PATH)
+                call(f"{add_command} debian/{d.name}", cwd=GR_APT_REPO_PATH)
 
             call(
                 f"git commit -a -m 'feat: add debian package: {' '.join(d.name for d in debs)}'",
