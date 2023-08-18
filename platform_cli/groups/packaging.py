@@ -18,7 +18,7 @@ def get_ros_distro():
 
 
 def get_debs(p: Path, debug_files: bool = False) -> List[Path]:
-    return list(p.glob("*.deb")) + list(p.glob("*.ddeb")) if debug_files else []
+    return list(p.glob("*.deb")) + (list(p.glob("*.ddeb")) if debug_files else [])
 
 
 def find_packages_with_colcon(p: Path) -> Dict[str, Path]:
