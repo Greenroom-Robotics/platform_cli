@@ -350,10 +350,16 @@ class Release(PlatformCliGroup):
         @click.option(
             "--package",
             type=str,
-            help="Which package should we build. If not specified, all packages will be built",
+            help="The package to release. If not set, all packages in the 'package_dir' will be released.",
             default="",
         )
-        def setup(package: str):  # type: ignore
+        @click.option(
+            "--package-dir",
+            type=str,
+            help="The directory to release packages from. If not set, the root of the repo will be used",
+            default="./",
+        )
+        def setup(package: str, package_dir: str):  # type: ignore
             """Copies the package.json and yarn.lock into the root of the project and installs the deps"""
             echo("Setting up release...", "blue", group_start=True)
             echo(
@@ -362,7 +368,7 @@ class Release(PlatformCliGroup):
             )
             asset_dir = Path(__file__).parent.parent / "assets"
 
-            packages = find_packages(Path.cwd())
+            packages = find_packages(Path.cwd() / package_dir)
 
             # Make sure the package exists if it was specified
             if package and package not in packages:
@@ -412,8 +418,14 @@ class Release(PlatformCliGroup):
         @click.option(
             "--package",
             type=str,
-            help="Which package should we build. If not specified, all packages will be built",
+            help="The package to release. If not set, all packages in the 'package_dir' will be released.",
             default="",
+        )
+        @click.option(
+            "--package-dir",
+            type=str,
+            help="The directory to release packages from. If not set, the root of the repo will be used",
+            default="./",
         )
         @click.option(
             "--arch",
@@ -426,11 +438,11 @@ class Release(PlatformCliGroup):
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, github_release: bool, public: bool, package: str, arch: List[Architecture], args: List[str]):  # type: ignore
+        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
 
-            packages = find_packages(Path.cwd())
+            packages = find_packages(Path.cwd() / package_dir)
 
             # Make sure the package exists if it was specified
             if package and package not in packages:
