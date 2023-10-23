@@ -111,9 +111,9 @@ class Ros(PlatformCliGroup):
                 return p1, p2
 
             if watch:
-                start_watcher(command)
-            else:
-                p1, p2 = command()
+                return start_watcher(command)
+
+            p1, p2 = command()
 
             if results_dir and results_dir.exists():
                 collect_xunit_xmls(results_dir, package)
@@ -142,9 +142,9 @@ class Ros(PlatformCliGroup):
                 call(f"ros2 launch {package_name} {launch_file_name}")
 
             if watch:
-                start_watcher(command)
-            else:
-                command()
+                return start_watcher(command)
+
+            command()
 
         @ros.command(name="install_poetry_deps")
         @click.option("--base-path", type=str, help="The path to where the packages are installed")
