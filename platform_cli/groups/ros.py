@@ -3,8 +3,9 @@ from typing import List
 from pathlib import Path
 import click
 
+
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import get_ros_env, echo, call
+from platform_cli.helpers import get_ros_env, echo, call, start_watcher
 
 
 def get_ros_poetry_packages(path: Path) -> List[Path]:
@@ -72,14 +73,23 @@ class Ros(PlatformCliGroup):
             if debug_symbols:
                 args_str += " --cmake-args -D CMAKE_BUILD_TYPE=RelWithDebInfo"
 
-            echo("Building packages...", "green")
             call(f"colcon build {args_str}")
 
         @ros.command(name="test")
         @click.option("--package", type=str, default=None, help="The package to test")
         @click.option("--results-dir", type=Path, default=None)
+        @click.option(
+            "--watch", type=bool, is_flag=True, default=False, help="Should we watch for changes?"
+        )
+        @click.option(
+            "--build",
+            type=bool,
+            is_flag=True,
+            default=False,
+            help="Should we build before testing?",
+        )
         @click.argument("args", nargs=-1)
-        def test(package: str, results_dir: Path, args: List[str]):  # type: ignore
+        def test(package: str, results_dir: Path, watch: bool, build: bool, args: List[str]):  # type: ignore
             """Runs colcon test on all ROS packages"""
 
             env = get_ros_env()
@@ -90,17 +100,51 @@ class Ros(PlatformCliGroup):
             if package:
                 args_str_test += f" --packages-select {package}"
 
-            echo("Testing packages...", "green")
-            p = call(
-                f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str_test}",
-                abort=False,
-            )
-            p2 = call(f"colcon test-result --all --verbose {args_str}", abort=False)
+            def command():
+                if build:
+                    call("platform ros build")
+                p1 = call(
+                    f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str_test}",
+                    abort=False,
+                )
+                p2 = call(f"colcon test-result --all --verbose {args_str}", abort=False)
+                return p1, p2
+
+            if watch:
+                start_watcher(command)
+            else:
+                p1, p2 = command()
 
             if results_dir and results_dir.exists():
                 collect_xunit_xmls(results_dir, package)
 
-            exit(max([p.returncode, p2.returncode]))
+            exit(max([p1.returncode, p2.returncode]))
+
+        @ros.command(name="launch")
+        @click.argument("package_name", type=str)
+        @click.argument("launch_file_name", type=str)
+        @click.option(
+            "--watch", type=bool, is_flag=True, default=False, help="Should we watch for changes?"
+        )
+        @click.option(
+            "--build",
+            type=bool,
+            is_flag=True,
+            default=False,
+            help="Should we build before launching?",
+        )
+        def launch(package_name: str, launch_file_name: str, watch: bool, build: bool):  # type: ignore
+            """Launches a ROS Package"""
+
+            def command():
+                if build:
+                    call("platform ros build")
+                call(f"ros2 launch {package_name} {launch_file_name}")
+
+            if watch:
+                start_watcher(command)
+            else:
+                command()
 
         @ros.command(name="install_poetry_deps")
         @click.option("--base-path", type=str, help="The path to where the packages are installed")

@@ -1,9 +1,36 @@
 from typing import TypedDict, cast, Optional, Dict, List
 import click
 import os
+import time
 from pathlib import Path
 from enum import Enum
 import subprocess
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+
+class FileSystemEventHandlerDebounced(FileSystemEventHandler):
+    def __init__(self, callback, debounce_time=0.5):
+        self.callback = callback
+        self.debounce_time = debounce_time
+        self.last_event = ""
+        self.last_event_time = 0
+
+    def on_modified(self, event):
+        if event.is_directory:
+            return
+        if (
+            event.src_path == self.last_event
+            and time.time() - self.last_event_time < self.debounce_time
+        ):
+            return
+
+        self.last_event = event.src_path
+        self.last_event_time = time.time()
+        try:
+            self.callback()
+        except Exception as e:
+            print(e)
 
 
 class RosEnv(TypedDict):
@@ -104,6 +131,31 @@ def stdout_call(
         raise click.ClickException("Run failed")
 
     return proc.stdout.decode("ascii")
+
+
+def start_watcher(
+    callback,
+    debounce_time: float = 0.5,
+):
+    cwd = Path().cwd() / "src"
+    click.echo(
+        click.style(
+            f"Watching: {click.style(cwd, bold=True)}",
+            fg="blue",
+        )
+    )
+    handler = FileSystemEventHandlerDebounced(callback, debounce_time)
+    observer = Observer()
+    observer.schedule(handler, cwd, recursive=True)
+    observer.start()
+    callback()
+
+    try:
+        while True:
+            time.sleep(1)
+    finally:
+        observer.stop()
+        observer.join()
 
 
 def call(
