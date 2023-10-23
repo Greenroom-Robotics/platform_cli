@@ -53,27 +53,36 @@ class Ros(PlatformCliGroup):
         @click.option("--package", type=str, default=None, help="The package to build")
         @click.option("--debug-symbols", is_flag=True, show_default=True, default=False)
         @click.option("--no-base", is_flag=True, default=False)
+        @click.option(
+            "--watch", type=bool, is_flag=True, default=False, help="Should we watch for changes?"
+        )
         @click.argument("args", nargs=-1)
-        def build(package: str, debug_symbols: bool, no_base: bool, args: List[str]):  # type: ignore
+        def build(package: str, debug_symbols: bool, no_base: bool, watch: bool, args: List[str]):
             """Runs colcon build on all ROS package"""
 
-            args_str = " ".join(args)
+            def command():
+                args_str = " ".join(args)
 
-            if package:
-                # use --packages-up-to if the dependencies weren't installed
-                # use --packages-select if all the dependencies were rosdepped
-                args_str += f" --packages-select {package}"
+                if package:
+                    # use --packages-up-to if the dependencies weren't installed
+                    # use --packages-select if all the dependencies were rosdepped
+                    args_str += f" --packages-select {package}"
 
-            if not no_base:
-                env = get_ros_env()
-                args_str += (
-                    f" --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']}"
-                )
+                if not no_base:
+                    env = get_ros_env()
+                    args_str += (
+                        f" --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']}"
+                    )
 
-            if debug_symbols:
-                args_str += " --cmake-args -D CMAKE_BUILD_TYPE=RelWithDebInfo"
+                if debug_symbols:
+                    args_str += " --cmake-args -D CMAKE_BUILD_TYPE=RelWithDebInfo"
 
-            call(f"colcon build {args_str}")
+                call(f"colcon build {args_str}")
+
+            if watch:
+                return start_watcher(command)
+
+            command()
 
         @ros.command(name="test")
         @click.option("--package", type=str, default=None, help="The package to test")
@@ -89,7 +98,7 @@ class Ros(PlatformCliGroup):
             help="Should we build before testing?",
         )
         @click.argument("args", nargs=-1)
-        def test(package: str, results_dir: Path, watch: bool, build: bool, args: List[str]):  # type: ignore
+        def test(package: str, results_dir: Path, watch: bool, build: bool, args: List[str]):
             """Runs colcon test on all ROS packages"""
 
             env = get_ros_env()
