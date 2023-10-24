@@ -148,7 +148,7 @@ class Ros(PlatformCliGroup):
             def command():
                 if build:
                     call("platform ros build")
-                return call(f"ros2 launch {package_name} {launch_file_name}", process=True)
+                return call(f"ros2 launch {package_name} {launch_file_name}", process=watch)
 
             if watch:
                 return start_watcher(command)

@@ -6,39 +6,57 @@ from pathlib import Path
 from enum import Enum
 import subprocess
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-from watchdog.utils.process_watcher import ProcessWatcher
-import functools
+from watchdog.events import FileSystemEventHandler, FileSystemEvent
+import signal
 
 
 class FileSystemEventHandlerDebounced(FileSystemEventHandler):
-    def __init__(self, callback: Callable[[], Union[None, subprocess.Popen]], debounce_time=0.5):
+    def __init__(self, callback: Callable[[], Union[None, subprocess.Popen]], debounce_time=2.0):
         self.callback = callback
         self.debounce_time = debounce_time
         self.last_event = ""
         self.last_event_time = 0
         self.process = None
-        self._process_watchers = set()
+        self.is_terminating = False
+
+    def kill_process(self):
+        # Kill existing process
+        if type(self.process) is subprocess.Popen:
+            self.is_terminating = True
+            click.echo(click.style("Killing existing process...", fg="red"))
+            self.process.send_signal(signal.SIGINT)
+            self.process.wait()
+            self.process = None
+            click.echo(click.style("Killing existing process complete", fg="yellow"))
+            self.is_terminating = False
+
+    def start_process(self):
+        process = self.callback()
+
+        if type(process) is subprocess.Popen:
+            self.process = process
 
     def on_modified(self, event):
+        # Ignore directories
         if event.is_directory:
             return
+
+        # Debounce
         if (
             event.src_path == self.last_event
             and time.time() - self.last_event_time < self.debounce_time
         ):
             return
 
+        # Is the process currently being terminated
+        if self.is_terminating:
+            return
+
         self.last_event = event.src_path
         self.last_event_time = time.time()
 
-        self.process = self.callback()
-        if self.process is None:
-            click.echo(click.style("Callback must return a Popen process", fg="red"))
-            return
-        process_watcher = ProcessWatcher(self.process, None)
-        self._process_watchers.add(process_watcher)
-        process_watcher.process_termination_callback = functools.partial(self._process_watchers.discard, process_watcher)  # type: ignore
+        self.kill_process()
+        self.start_process()
 
 
 class RosEnv(TypedDict):
@@ -143,7 +161,7 @@ def stdout_call(
 
 def start_watcher(
     callback,
-    debounce_time: float = 0.5,
+    debounce_time: float = 2.0,
 ):
     folders_to_ignore = ["log", "build"]
 
@@ -165,7 +183,9 @@ def start_watcher(
         observer.schedule(handler, cwd / folder, recursive=True)
 
     observer.start()
-    callback()
+
+    # Trigger a fake event to start the process
+    handler.on_modified(FileSystemEvent(""))
 
     try:
         while True:
