@@ -7,7 +7,7 @@ module.exports = {
         [
             "@semantic-release/exec",
             {
-              "prepareCmd": "echo __version__ = \"${nextRelease.version}\" > ./platform_cli/__init__.py",
+              "prepareCmd": "./scripts/version.sh ${nextRelease.version}",
             }
         ],
         "@semantic-release/github",
