@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.2.1...v1.2.2) (2023-10-24)
+
+
+### Bug Fixes
+
+* remove `process=True` from build ([b3280fa](https://github.com/Greenroom-Robotics/platform_cli/commit/b3280fae13831db2900fd06b365cbe1d3474b410))
+
 ## [1.2.1](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.2.0...v1.2.1) (2023-10-24)
 
 
