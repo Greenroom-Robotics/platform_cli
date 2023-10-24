@@ -43,16 +43,18 @@ class Workspace(PlatformCliGroup):
                 container.copy_to(f.name, "/etc/apt/apt.conf.d/01proxy")
 
         @ws.command(name="container")
-        # @click.option("--package", type=str, default=None, help="The package to build")
+        @click.option("--base", type=str, default=None, help="The base image to use")
         # @click.option("--debug-symbols", is_flag=True, show_default=True, default=False)
         # @click.option("--no-base", is_flag=True, default=False)
         # @click.argument("args", nargs=-1)
-        def container():  # type: ignore
+        def container(base_image: Optional[str]):  # type: ignore
             """Creates a container for the workspace"""
 
-            env = get_env(PkgEnv)
+            # env = get_env(PkgEnv)
             workspace_path = Path.cwd()
             container_name = f"platform_ws_{workspace_path.name}"
+
+            base_image = base_image if base_image else "ghcr.io/greenroom-robotics/ros_builder:humble-latest"
 
             if docker.container.exists(container_name):
                 container = docker.container.inspect(container_name)
@@ -68,7 +70,7 @@ class Workspace(PlatformCliGroup):
                                                         "device": "overlay"
                                                     })
 
-            container = docker.run("ghcr.io/greenroom-robotics/ros_builder:humble-latest",
+            container = docker.run(base_image,
                                    ["tail", "-f", "/dev/null"],
                 name=container_name,
                 volumes=[
@@ -79,6 +81,7 @@ class Workspace(PlatformCliGroup):
                 envs=env,
                 detach=True, remove=False
             )
+
             echo(f"Container '{container_name}' created", "green")
             container.execute(["mkdir", "ws"], tty=True)  # , "chown", "ros:ros", "/home/ros/ws"
             container.execute(["ln", "-s", "/ws_src", "ws/src"], tty=True)
