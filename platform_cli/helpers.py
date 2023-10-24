@@ -86,12 +86,17 @@ def check_directory_ownership(path: Path) -> bool:
     return stat.st_uid == os.getuid() and stat.st_gid == os.getgid()
 
 
-def get_ros_env() -> RosEnv:
-    for env in RosEnv.__required_keys__:  # type: ignore
-        if env not in os.environ:
-            raise click.ClickException(f"{env} environment variable must be set.")
+def get_env(env_type: Union[Type[TypedDict], Type[TypedDict]], abort: bool = True) -> TypedDict:
+    if abort:
+        for env in env_type.__required_keys__:  # type: ignore
+            if env not in os.environ:
+                raise click.ClickException(f"{env} environment variable must be set.")
 
-    return cast(RosEnv, os.environ)
+    return cast(env_type, {k: os.environ[k] for k in env_type.__required_keys__})
+
+
+def get_ros_env(abort: bool = True) -> RosEnv:
+    return get_env(RosEnv, abort)
 
 
 def is_ci_environment() -> bool:

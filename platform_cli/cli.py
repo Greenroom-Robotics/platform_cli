@@ -3,6 +3,7 @@ import click
 from typing import List
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.groups.ros import Ros
+from platform_cli.groups.ws import Workspace
 from platform_cli.groups.poetry import Poetry
 from platform_cli.groups.packaging import Packaging
 from platform_cli.groups.release import Release
@@ -15,6 +16,7 @@ base_groups: List[PlatformCliGroup] = [
     Packaging(),
     Release(),
     Py(),
+    Workspace(),
 ]
 
 help = f"""
