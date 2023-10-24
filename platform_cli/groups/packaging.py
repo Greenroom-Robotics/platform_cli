@@ -209,7 +209,7 @@ class Packaging(PlatformCliGroup):
             default="debs",
             help="The output directory for the debs",
         )
-        @click.option("--no-tests", type=bool, default=True)
+        @click.option("--no-tests", type=bool, is_flag=True, default=True)
         def build(version: str, output: str, no_tests: bool):  # type: ignore reportUnusedFunction
             """Builds the package using bloom"""
 
