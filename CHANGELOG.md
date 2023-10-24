@@ -1,3 +1,25 @@
+## [1.2.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.1.0...v1.2.0) (2023-10-24)
+
+
+### Features
+
+* add --build and --watch flags to ros test and launch ([ce05eb6](https://github.com/Greenroom-Robotics/platform_cli/commit/ce05eb620d5fd931f140169994c3523fa71ea759))
+* add --sparse option to apt clone and add ([71e3def](https://github.com/Greenroom-Robotics/platform_cli/commit/71e3def7b9f1dfea266c7536d3912ef077e59443))
+* add --watch option to `platform ros build` ([14992dd](https://github.com/Greenroom-Robotics/platform_cli/commit/14992dd43b39c35beba1d23c0f2c3a90a44907fc))
+* add package-dir argument to release ([63fc640](https://github.com/Greenroom-Robotics/platform_cli/commit/63fc64022615a84d1e3182c7a754848e79e0cdad))
+* update Dockerfile to iron ([613a028](https://github.com/Greenroom-Robotics/platform_cli/commit/613a028e77f949d886c906c30f011ed0fb81ac46))
+
+
+### Bug Fixes
+
+* add exception if API_TOKEN_GITHUB not set ([e4db930](https://github.com/Greenroom-Robotics/platform_cli/commit/e4db9304552011f3bf2a579a005ba82d3d47b15e))
+* also upload the debian debugsym ddeb to gh release ([aa89f48](https://github.com/Greenroom-Robotics/platform_cli/commit/aa89f48127fb5ced703408caaffeb585889aa63a))
+* do not force push ([880e819](https://github.com/Greenroom-Robotics/platform_cli/commit/880e81975a037c7d6737e2d1a678f0ff20098252))
+* don't have colcon create log when finding packages ([2b3f026](https://github.com/Greenroom-Robotics/platform_cli/commit/2b3f026c75ddaddfe960897b92c0a155c43f6998))
+* ensure git lfs hooks have been installed ([a7e8278](https://github.com/Greenroom-Robotics/platform_cli/commit/a7e8278d5e34ddc885d629d788d66374227ecf66))
+* finding debs when debug_files is false ([42ee412](https://github.com/Greenroom-Robotics/platform_cli/commit/42ee4120acf10523228643c3ceb93578b7ca0b4e))
+* use ProcessWatcher to handle `--watch` ([d81b99d](https://github.com/Greenroom-Robotics/platform_cli/commit/d81b99dbdf0fd592d6cdad7e139fb24c1da7a611))
+
 ## [1.0.1](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.0.0...v1.0.1) (2022-11-20)
 
 
