@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.2.2...v1.2.3) (2023-10-24)
+
+
+### Bug Fixes
+
+* add support for processes when using `--watch` ([723f917](https://github.com/Greenroom-Robotics/platform_cli/commit/723f9175937b896e3b1afd8ae88dbe8e7bdcaa4e))
+
 ## [1.2.2](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.2.1...v1.2.2) (2023-10-24)
 
 
