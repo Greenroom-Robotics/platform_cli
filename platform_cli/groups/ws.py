@@ -4,6 +4,8 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 import click
 
+from git import Repo
+from platform_cli.groups.release import find_packages
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.helpers import get_env, PkgEnv, echo, call
 
@@ -66,7 +68,8 @@ class Workspace(PlatformCliGroup):
                                                         "device": "overlay"
                                                     })
 
-            container = docker.run("ghcr.io/greenroom-robotics/ros_builder:humble-latest", ["tail", "-f", "/dev/null"],
+            container = docker.run("ghcr.io/greenroom-robotics/ros_builder:humble-latest",
+                                   ["tail", "-f", "/dev/null"],
                 name=container_name,
                 volumes=[
                 # (workspace_path / "src", "/home/ros/ws/src",  "ro"),
@@ -80,6 +83,7 @@ class Workspace(PlatformCliGroup):
             container.execute(["mkdir", "ws"], tty=True)  # , "chown", "ros:ros", "/home/ros/ws"
             container.execute(["ln", "-s", "/ws_src", "ws/src"], tty=True)
             # container.execute(["sudo", "chown", "ros:ros", "/home/ros/ws"], tty=True)
+
             container.execute(["pip", "install", "/platform/tools/platform_cli"], tty=True)
             container.execute(["platform", "pkg", "setup"], tty=True)
             # container.execute(["platform", "pkg", "refresh-deps"], tty=True)
@@ -89,8 +93,65 @@ class Workspace(PlatformCliGroup):
             # can_adapter@  
             #    platform_can@   platform_control@ 
 
-
-
-
-
             # container.stop()
+
+        @ws.command(name="versions")
+        # @click.argument("package", type=str)
+        def versions():  # type: ignore
+            """Gets the versions of the packages in the workspace"""
+
+            workspace_path = Path.cwd()
+            packages = find_packages(workspace_path / "src")
+
+# TODO follow symlinks
+# In [33]: p =  Path('/home/russ/work/is-workspace/src/platform_can')
+# In [34]: p.is_symlink()
+# Out[34]: True
+# In [35]: p.readlink()
+# Out[35]: PosixPath('/home/russ/work/platform/packages/platform_can')
+
+            print(packages)
+            for name, info in packages.items():
+                if info.module_info is None:
+                    continue
+
+                repo = Repo(info.module_info.platform_module_path)
+                for tag in repo.tags:
+                    if tag.name.startswith(name):
+                        print(tag)
+
+        @ws.command(name="build-pkg")
+        @click.option(
+            "--package",
+            type=str,
+            help="Which package should we build.",
+        )
+        @click.option(
+            "--version",
+            type=str,
+            help="The version number to assign to the deb",
+            required=False,
+            default="",
+        )
+        # add a flag to skip rosdep
+        @click.option("--no-rosdep", type=bool, is_flag=True, default=False)
+        def build_pkg(package: str, version: str, no_rosdep: bool):  # type: ignore
+            """Builds a package in the workspace"""
+
+            workspace_path = Path.cwd()
+            container_ws = Path("/home/ros/ws")
+            packages = find_packages(workspace_path / "src")
+            container_name = f"platform_ws_{workspace_path.name}"
+            container = docker.container.inspect(container_name)
+
+            if package not in packages:
+                echo(f"Package '{package}' not found", "red")
+                return
+            
+            rel_path = packages[package].package_path.relative_to(workspace_path)
+
+            container.execute(["platform", "pkg", "clean"], tty=True, workdir=container_ws / rel_path)
+            if not no_rosdep:
+                container.execute(["platform", "pkg", "install-deps"], tty=True, workdir=container_ws / rel_path)
+            container.execute(["platform", "pkg", "build", "--version", version], tty=True, workdir=container_ws / rel_path)
+
