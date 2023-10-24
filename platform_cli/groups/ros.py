@@ -77,7 +77,7 @@ class Ros(PlatformCliGroup):
                 if debug_symbols:
                     args_str += " --cmake-args -D CMAKE_BUILD_TYPE=RelWithDebInfo"
 
-                return call(f"colcon build {args_str}", process=True)
+                return call(f"colcon build {args_str}")
 
             if watch:
                 return start_watcher(command)
