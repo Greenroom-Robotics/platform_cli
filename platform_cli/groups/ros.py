@@ -77,7 +77,7 @@ class Ros(PlatformCliGroup):
                 if debug_symbols:
                     args_str += " --cmake-args -D CMAKE_BUILD_TYPE=RelWithDebInfo"
 
-                call(f"colcon build {args_str}")
+                return call(f"colcon build {args_str}", process=True)
 
             if watch:
                 return start_watcher(command)
@@ -148,7 +148,7 @@ class Ros(PlatformCliGroup):
             def command():
                 if build:
                     call("platform ros build")
-                call(f"ros2 launch {package_name} {launch_file_name}")
+                return call(f"ros2 launch {package_name} {launch_file_name}", process=True)
 
             if watch:
                 return start_watcher(command)

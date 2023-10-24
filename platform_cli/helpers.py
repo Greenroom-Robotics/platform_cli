@@ -1,4 +1,4 @@
-from typing import TypedDict, cast, Optional, Dict, List
+from typing import TypedDict, cast, Optional, Dict, Union, Callable
 import click
 import os
 import time
@@ -7,14 +7,18 @@ from enum import Enum
 import subprocess
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from watchdog.utils.process_watcher import ProcessWatcher
+import functools
 
 
 class FileSystemEventHandlerDebounced(FileSystemEventHandler):
-    def __init__(self, callback, debounce_time=0.5):
+    def __init__(self, callback: Callable[[], Union[None, subprocess.Popen]], debounce_time=0.5):
         self.callback = callback
         self.debounce_time = debounce_time
         self.last_event = ""
         self.last_event_time = 0
+        self.process = None
+        self._process_watchers = set()
 
     def on_modified(self, event):
         if event.is_directory:
@@ -27,10 +31,14 @@ class FileSystemEventHandlerDebounced(FileSystemEventHandler):
 
         self.last_event = event.src_path
         self.last_event_time = time.time()
-        try:
-            self.callback()
-        except Exception as e:
-            print(e)
+
+        self.process = self.callback()
+        if self.process is None:
+            click.echo(click.style("Callback must return a Popen process", fg="red"))
+            return
+        process_watcher = ProcessWatcher(self.process, None)
+        self._process_watchers.add(process_watcher)
+        process_watcher.process_termination_callback = functools.partial(self._process_watchers.discard, process_watcher)  # type: ignore
 
 
 class RosEnv(TypedDict):
@@ -137,7 +145,12 @@ def start_watcher(
     callback,
     debounce_time: float = 0.5,
 ):
-    cwd = Path().cwd() / "src"
+    folders_to_ignore = ["log", "build"]
+
+    # Get all folders in the current directory
+    cwd = Path().cwd()
+    folders = [f for f in os.listdir(cwd) if os.path.isdir(f) and f not in folders_to_ignore]
+
     click.echo(
         click.style(
             f"Watching: {click.style(cwd, bold=True)}",
@@ -146,7 +159,11 @@ def start_watcher(
     )
     handler = FileSystemEventHandlerDebounced(callback, debounce_time)
     observer = Observer()
-    observer.schedule(handler, cwd, recursive=True)
+
+    for folder in folders:
+        # Watch all folders in the current directory
+        observer.schedule(handler, cwd / folder, recursive=True)
+
     observer.start()
     callback()
 
@@ -166,7 +183,8 @@ def call(
     sudo: bool = False,
     env: Dict[str, str] = {},
     retry: int = 0,
-) -> subprocess.CompletedProcess[bytes]:
+    process: bool = False,  # return the process object
+) -> Union[subprocess.CompletedProcess[bytes], subprocess.Popen[bytes]]:
     if project_root_cwd and cwd:
         raise RuntimeError("Both 'cwd' and 'project_root_cwd' are set")
 
@@ -186,6 +204,12 @@ def call(
             fg="blue",
         )
     )
+    if process:
+        proc = subprocess.Popen(
+            command, shell=True, executable="/bin/bash", cwd=cwd, env=env_extended
+        )
+        return proc
+
     try:
         proc = subprocess.run(
             command, shell=True, executable="/bin/bash", cwd=cwd, check=abort, env=env_extended
