@@ -10,6 +10,7 @@ module.exports = {
               "prepareCmd": "echo __version__ = \"${nextRelease.version}\" > ./platform_cli/__init__.py",
             }
         ],
+        "semantic-release-pypi",
         "@semantic-release/github",
         [
             "@semantic-release/git",
