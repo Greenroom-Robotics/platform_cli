@@ -269,7 +269,7 @@ class Packaging(PlatformCliGroup):
         def apt_add(sparse: bool, deb: str):  # type: ignore reportUnusedFunction
             """Adds a .deb to the GR apt repo"""
 
-            if not GR_APT_REPO_PATH:
+            if not GR_APT_REPO_PATH.exists():
                 raise click.ClickException("GR apt repo has not been cloned.")
 
             if deb:
