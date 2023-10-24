@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.2.0...v1.2.1) (2023-10-24)
+
+
+### Bug Fixes
+
+* update ci process ([5b8b262](https://github.com/Greenroom-Robotics/platform_cli/commit/5b8b262b14919a8c85564de8dca84b3b4ba92914))
+
 ## [1.2.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.1.0...v1.2.0) (2023-10-24)
 
 
