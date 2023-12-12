@@ -155,6 +155,31 @@ class Ros(PlatformCliGroup):
 
             command()
 
+        @ros.command(name="run")
+        @click.option(
+            "--watch", type=bool, is_flag=True, default=False, help="Should we watch for changes?"
+        )
+        @click.option(
+            "--build",
+            type=bool,
+            is_flag=True,
+            default=False,
+            help="Should we build before launching?",
+        )
+        @click.argument("args", nargs=-1)
+        def run(watch: bool, build: bool, args: List[str]):  # type: ignore
+            """Runs a script after building the ROS packages"""
+
+            def command():
+                if build:
+                    call("platform ros build")
+                return call(" ".join(args), process=watch)
+
+            if watch:
+                return start_watcher(command)
+
+            command()
+
         @ros.command(name="install_poetry_deps")
         @click.option("--base-path", type=str, help="The path to where the packages are installed")
         def install_poetry_deps(base_path: Path):  # type: ignore
