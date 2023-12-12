@@ -1,3 +1,10 @@
+## [1.3.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.2.3...v1.3.0) (2023-12-12)
+
+
+### Features
+
+* add a `plaform ros run` script ([c4bfbed](https://github.com/Greenroom-Robotics/platform_cli/commit/c4bfbedecaadf0b661f5acfbabc8f59674b7d023))
+
 ## [1.2.3](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.2.2...v1.2.3) (2023-10-24)
 
 
