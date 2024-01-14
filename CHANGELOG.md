@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.3.0...v1.3.1) (2024-01-14)
+
+
+### Bug Fixes
+
+* only watch pythong and cpp files ([b72239b](https://github.com/Greenroom-Robotics/platform_cli/commit/b72239b1be09dc503a6134c369e2c581852cfa10))
+
 ## [1.3.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.2.3...v1.3.0) (2023-12-12)
 
 
