@@ -1,4 +1,4 @@
-from typing import TypedDict, cast, Optional, Dict, Union, Callable
+from typing import TypedDict, cast, Optional, Dict, Union, Callable, List
 import click
 import os
 import time
@@ -11,8 +11,14 @@ import signal
 
 
 class FileSystemEventHandlerDebounced(FileSystemEventHandler):
-    def __init__(self, callback: Callable[[], Union[None, subprocess.Popen]], debounce_time=2.0):
+    def __init__(
+        self,
+        callback: Callable[[], Union[None, subprocess.Popen]],
+        file_types: List[str] = [],
+        debounce_time=2.0,
+    ):
         self.callback = callback
+        self.file_types = file_types
         self.debounce_time = debounce_time
         self.last_event = ""
         self.last_event_time = 0
@@ -36,9 +42,15 @@ class FileSystemEventHandlerDebounced(FileSystemEventHandler):
         if type(process) is subprocess.Popen:
             self.process = process
 
-    def on_modified(self, event):
+    def on_modified(self, event: FileSystemEvent):
         # Ignore directories
         if event.is_directory:
+            return
+
+        file_type = Path(event.src_path).suffix
+
+        # Ignore files that don't match the file types
+        if file_type not in self.file_types:
             return
 
         # Debounce
@@ -161,6 +173,7 @@ def stdout_call(
 
 def start_watcher(
     callback,
+    file_types: List[str] = [".py", ".cpp", ".c", ".hpp", ".h"],
     debounce_time: float = 2.0,
 ):
     folders_to_ignore = ["log", "build"]
@@ -175,7 +188,7 @@ def start_watcher(
             fg="blue",
         )
     )
-    handler = FileSystemEventHandlerDebounced(callback, debounce_time)
+    handler = FileSystemEventHandlerDebounced(callback, file_types, debounce_time)
     observer = Observer()
 
     for folder in folders:
@@ -185,7 +198,7 @@ def start_watcher(
     observer.start()
 
     # Trigger a fake event to start the process
-    handler.on_modified(FileSystemEvent(""))
+    handler.on_modified(FileSystemEvent("fake_event.py"))
 
     try:
         while True:
