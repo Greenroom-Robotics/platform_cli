@@ -11,6 +11,9 @@ from platform_cli.helpers import get_env, echo, call
 
 from python_on_whales import docker
 
+def get_system_platform_path() -> Path:
+    return Path.home() / "work/platform"
+
 
 class Workspace(PlatformCliGroup):
     def create(self, cli: click.Group):
@@ -58,7 +61,7 @@ class Workspace(PlatformCliGroup):
         def container(base_image: Optional[str], path: List[str]):  # type: ignore
             """Creates a container for the workspace"""
 
-            system_platform_path = Path.home() / "work/platform"
+            system_platform_path = get_system_platform_path()
             container_platform_path = Path("/platform")
             container_home_path = Path("/home/ros")
             workspace_path = Path.cwd()
@@ -104,10 +107,28 @@ class Workspace(PlatformCliGroup):
             container.execute(["platform", "pkg", "setup"], tty=True)
             # container.execute(["platform", "pkg", "refresh-deps"], tty=True)
             
-            # how do we source the setup.bash files?
+            # how do we source the setup.bash files? needs to be ran as bash -l -c COMMAND
             # container.execute(["colcon", "build"], tty=True)
 
             # container.stop()
+
+        @ws.command(name="symlink")
+        @click.option("--package", type=str, multiple=True)
+        def symlink(package: List[str]):  # type: ignore
+            workspace_path = Path.cwd()
+            platform_packages = find_packages(get_system_platform_path() / "packages")
+
+            for p in package:
+                if p not in platform_packages:
+                    echo(f"Package '{p}' not found", "red")
+                    return
+
+                if (workspace_path / "src" / p).exists():
+                    echo(f"Package '{p}' already exists in workspace", "yellow")
+                    continue
+
+                echo(f"Adding {p} to workspace as a symlink", "green")
+                (workspace_path / "src" / p).symlink_to(platform_packages[p].package_path)
 
         @ws.command(name="versions")
         # @click.argument("package", type=str)
