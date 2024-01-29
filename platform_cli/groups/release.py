@@ -184,6 +184,9 @@ def find_packages(path: Optional[Path] = None, module_info: bool=True) -> Dict[s
 
     packages = {}
     for package_xml in package_xmls:
+        if package_xml.parent.parent.name == "share":
+            # this package is inside an install directory, so ignore it
+            continue
         package = get_package_info(package_xml.parent, module_info)
         packages[package.package_name] = package
 
