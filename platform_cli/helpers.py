@@ -1,4 +1,4 @@
-from typing import TypedDict, cast, Optional, Dict, Union, Callable, List
+from typing import Type, TypedDict, cast, Optional, Dict, Union, Callable, List
 import click
 import os
 import time
