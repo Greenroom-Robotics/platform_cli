@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.3.1...v1.3.2) (2024-02-14)
+
+
+### Bug Fixes
+
+* only mount packages in the package_dir into the docker container ([250a9b7](https://github.com/Greenroom-Robotics/platform_cli/commit/250a9b790037278f9e31bddffe382096b4b14a0d))
+
 ## [1.3.1](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.3.0...v1.3.1) (2024-01-14)
 
 
