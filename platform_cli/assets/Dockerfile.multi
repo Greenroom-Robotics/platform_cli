@@ -4,7 +4,7 @@ ARG PACKAGE_DIR="./"
 
 # Create the package_manifests by deleting everything other than package.xml
 WORKDIR /package_manifests
-COPY ${PACKAGE_DIR} ./
+COPY ${PACKAGE_DIR} ${PACKAGE_DIR}
 RUN sudo chown ros:ros .
 RUN sudo find . -regextype egrep -not -regex '.*/(package\.xml)$' -type f -delete
 RUN sudo find . -type d -empty -delete
@@ -33,7 +33,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 WORKDIR /home/ros/${PLATFORM_MODULE}
 
-COPY ${PACKAGE_DIR} ./
+COPY ${PACKAGE_DIR} ${PACKAGE_DIR}
 RUN sudo chown -R ros:ros /home/ros/${PLATFORM_MODULE}
 RUN --mount=type=cache,target=/home/ros/.cache/pip,sharing=locked \
   platform poetry install
