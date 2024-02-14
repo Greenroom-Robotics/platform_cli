@@ -94,11 +94,14 @@ def get_releaserc(
     public: bool = False,
     arch: List[Architecture] = [],
     package: Optional[str] = None,
+    package_dir: Optional[str] = None,
 ):
     """
     Returns the releaserc with the plugins configured according to the arguments
     """
     prepare_cmd_args = "--version=${nextRelease.version}"
+    if package_dir:
+        prepare_cmd_args += f" --package-dir={package_dir}"
     for a in arch:
         prepare_cmd_args += f" --arch={a.value}"
     if package:
@@ -454,7 +457,7 @@ class Release(PlatformCliGroup):
                 # This prevents us from building the docker image multiple times
                 package_to_build = package_name if package else None
                 releaserc = get_releaserc(
-                    changelog, github_release, public, arch, package_to_build
+                    changelog, github_release, public, arch, package_to_build, package_dir
                 )
                 with open(package_info.package_path / ".releaserc", "w+") as f:
                     f.write(json.dumps(releaserc, indent=4))
@@ -503,7 +506,13 @@ class Release(PlatformCliGroup):
             help="Which package should we build. If not specified, all packages will be built",
             default="",
         )
-        def deb_prepare(version: str, arch: List[Architecture], package: str):  # type: ignore
+        @click.option(
+            "--package-dir",
+            type=str,
+            help="The directory to release packages from. If not set, the root of the repo will be used",
+            default="./",
+        )
+        def deb_prepare(version: str, arch: List[Architecture], package: str, package_dir: str):  # type: ignore
             """Prepares the release by building the debian package inside a docker container"""
             docker_platforms = [f"linux/{a.value}" for a in arch]
             echo(f"Preparing to build .deb for {[a.value for a in arch]}", "blue")
@@ -579,6 +588,7 @@ class Release(PlatformCliGroup):
                 build_args={
                     "API_TOKEN_GITHUB": os.environ["API_TOKEN_GITHUB"],
                     "PLATFORM_MODULE": package_info.module_info.platform_module_name,
+                    "PACKAGE_DIR": package_dir,
                     # Note we pass the PACKAGE_NAME here so we can rosdep install and build only the package we want
                     # If we don't pass this, it will try to build all packages in the workspace
                     # When in MULTI mode, we want to build all packages without installing deps / building each package
