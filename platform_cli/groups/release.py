@@ -303,7 +303,6 @@ class Release(PlatformCliGroup):
         """
         echo(
             f"Building {package_info.package_name} .deb for {architecture.value}",
-            group_start=True,
         )
         docker_image_name_with_digest = self._get_docker_image_name_with_digest(
             docker_image_name, image_manifests, architecture
@@ -342,7 +341,6 @@ class Release(PlatformCliGroup):
             ],
             platform=docker_plaform,
         )
-        echo(group_end=True)
 
     def create(self, cli: click.Group):
         @cli.group(help="CLI handlers associated releasing a platform module")
@@ -364,7 +362,7 @@ class Release(PlatformCliGroup):
         )
         def setup(package: str, package_dir: str):  # type: ignore
             """Copies the package.json and yarn.lock into the root of the project and installs the deps"""
-            echo("Setting up release...", "blue", group_start=True)
+            echo("Setting up release...", "blue")
             echo(
                 "Copying package.json and yarn.lock to root and installing deps...",
                 "blue",
@@ -397,7 +395,6 @@ class Release(PlatformCliGroup):
                 self._write_docker_file(asset_dir, module_info.platform_module_path, release_mode)
 
             call("yarn install --frozen-lockfile")
-            echo(group_end=True)
 
         @release.command(name="create")
         @click.option(
@@ -531,7 +528,7 @@ class Release(PlatformCliGroup):
             )
 
             # Install qemu binfmt support for other architectures
-            echo("Setting up QEMU...", group_start=True)
+            echo("Setting up QEMU...")
             try:
                 docker.run(
                     "multiarch/qemu-user-static",
@@ -545,7 +542,7 @@ class Release(PlatformCliGroup):
                 pass
 
             # Start a local registry on port 5000
-            echo("Setting up local docker registry...", group_start=True, group_end=True)
+            echo("Setting up local docker registry...")
             try:
                 docker.run(
                     "registry:2",
@@ -557,11 +554,7 @@ class Release(PlatformCliGroup):
             except Exception as e:
                 echo(f"Local registry already running: {e}", "yellow")
 
-            echo(
-                "Building docker container with buildx...",
-                group_start=True,
-                group_end=True,
-            )
+            echo("Building docker container with buildx...")
             try:
                 # Configure docker to use the platform buildx builder
                 # Network host is required for the local registry to work
@@ -600,7 +593,6 @@ class Release(PlatformCliGroup):
 
             # Inspect the image to get the manifest
             image_manifests = docker.buildx.imagetools.inspect(docker_image_name)
-            echo(group_end=True)
 
             for architecture in arch:
                 try:
@@ -629,14 +621,13 @@ class Release(PlatformCliGroup):
         def deb_publish(public: bool):  # type: ignore
             """Publishes the deb to the apt repo"""
             try:
-                echo("Publishing .deb to apt repo...", group_start=True)
+                echo("Publishing .deb to apt repo...")
                 call(f"platform pkg apt-clone --public {public}")
 
                 debs_folder = Path.cwd() / DEBS_DIRECTORY
 
                 call("platform pkg apt-add", cwd=Path(debs_folder))
                 call("platform pkg apt-push")
-                echo(group_end=True)
             except Exception as e:
                 echo("Failed to publish .deb", "red", level=LogLevels.ERROR)
                 raise e
