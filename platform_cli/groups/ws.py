@@ -1,8 +1,9 @@
 from glob import glob
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 import click
+import re
 
 from git import Repo
 from platform_cli.groups.release import find_packages
@@ -11,8 +12,31 @@ from platform_cli.helpers import get_env, echo, call
 
 from python_on_whales import docker
 
+BASE_IMAGE = "ghcr.io/greenroom-robotics/ros_builder:iron-latest"
+
+def get_auth_file() -> Dict[str, str]:
+    entries = (Path().home()/ ".gr" / "auth").read_text().strip().split("\n")
+    matches = [re.match(r"export (?P<key>\w+)=(?P<value>.+)", e) for e in entries]
+    return {m.group("key"): m.group("value") for m in matches}
+
+
 def get_system_platform_path() -> Path:
     return Path.home() / "work/platform"
+
+
+def ws_symlinks_to_platform_paths(workspace_path: Path, packages: Dict[Any, Any]) -> Tuple[Dict[str, Path], Dict[str, Path]]:
+    platform_paths = {}
+    other_paths = {}
+    for path in (workspace_path / "src").iterdir():
+        if path.is_symlink():
+            pkg_name = path.name
+            pkg_path = path.resolve()
+            if pkg_path.parts[:len(get_system_platform_path().parts)] != get_system_platform_path().parts:
+                echo(f"Non platform based package: {pkg_path}", "yellow")
+                other_paths[pkg_name] = pkg_path
+            else:
+                platform_paths[pkg_name] = pkg_path
+    return platform_paths, other_paths
 
 
 class Workspace(PlatformCliGroup):
@@ -61,13 +85,16 @@ class Workspace(PlatformCliGroup):
         def container(base_image: Optional[str], path: List[str]):  # type: ignore
             """Creates a container for the workspace"""
 
+            base_image = base_image if base_image else BASE_IMAGE
             system_platform_path = get_system_platform_path()
             container_platform_path = Path("/platform")
+            container_other_path = Path("/other_pkgs")
             container_home_path = Path("/home/ros")
             workspace_path = Path.cwd()
             container_name = f"platform_ws_{workspace_path.name}"
 
-            base_image = base_image if base_image else "ghcr.io/greenroom-robotics/ros_builder:humble-latest"
+            packages = find_packages(workspace_path / "src")
+            platform_paths, other_pkgs = ws_symlinks_to_platform_paths(workspace_path, packages)
 
             if docker.container.exists(container_name):
                 container = docker.container.inspect(container_name)
@@ -83,24 +110,30 @@ class Workspace(PlatformCliGroup):
             #                                             "device": "overlay"
             #                                         })
 
+
+            other_volumes = [(p, container_other_path / pkg, "rw") for pkg, p in other_pkgs.items()]
+
             container = docker.run(base_image,
                                    ["tail", "-f", "/dev/null"],
                 name=container_name,
+                envs=get_auth_file(),
                 volumes=[
                 # (workspace_path / "src", "/home/ros/ws/src",  "ro"),
-                         (system_platform_path, container_platform_path, "ro"),
-                        #   (workspace_volume, "/ws_src")
-                          ],
+                         (system_platform_path, container_platform_path, "rw"),
+                          ] + other_volumes,
                 workdir=container_home_path,
-                # envs=env,
                 detach=True, remove=False
             )
 
             echo(f"Container '{container_name}' created", "green")
             container.execute(["mkdir", "-p", "ws/src"], tty=True)  # , "chown", "ros:ros", "/home/ros/ws"
 
-            for p in [Path(x) for x in path]:
+            for p in platform_paths.values():
                 p_rel = container_platform_path / p.relative_to(system_platform_path)
+                container.execute(["ln", "-s", str(p_rel), "ws/src"], tty=True)
+
+            for p in other_pkgs.values():
+                p_rel = container_other_path / p.name
                 container.execute(["ln", "-s", str(p_rel), "ws/src"], tty=True)
 
             container.execute(["pip", "install", str(container_platform_path / "tools/platform_cli")], tty=True)
