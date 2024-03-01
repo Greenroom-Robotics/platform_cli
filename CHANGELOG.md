@@ -1,3 +1,11 @@
+## [1.3.3](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.3.2...v1.3.3) (2024-03-01)
+
+
+### Bug Fixes
+
+* add PACKAGE_DIR ([60c0c45](https://github.com/Greenroom-Robotics/platform_cli/commit/60c0c45af812a80b9c621701560123fc7880b1a9))
+* mount packages into the same location ([c4b001a](https://github.com/Greenroom-Robotics/platform_cli/commit/c4b001a30faf885724024bc873fcd81f2150e570))
+
 ## [1.3.2](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.3.1...v1.3.2) (2024-02-14)
 
 
