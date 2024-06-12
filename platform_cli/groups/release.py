@@ -95,6 +95,7 @@ def get_releaserc(
     arch: List[Architecture] = [],
     package: Optional[str] = None,
     package_dir: Optional[str] = None,
+    ros_distro: Optional[str] = None,
 ):
     """
     Returns the releaserc with the plugins configured according to the arguments
@@ -106,6 +107,8 @@ def get_releaserc(
         prepare_cmd_args += f" --arch={a.value}"
     if package:
         prepare_cmd_args += f" --package={package}"
+    if ros_distro:
+        prepare_cmd_args += f" --ros-distro={ros_distro}"
 
     releaserc = {
         "branches": ["main", "master", {"name": "alpha", "prerelease": True}],
@@ -434,11 +437,17 @@ class Release(PlatformCliGroup):
             default=[Architecture.AMD64, Architecture.ARM64],
             multiple=True,
         )
+        @click.option(
+            "--ros-distro",
+            type=str,
+            help="The ROS2 distro to build for. eg) foxy, galactic",
+            default="iron",
+        )
         @click.argument(
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], args: List[str]):  # type: ignore
+        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
 
@@ -454,7 +463,13 @@ class Release(PlatformCliGroup):
                 # This prevents us from building the docker image multiple times
                 package_to_build = package_name if package else None
                 releaserc = get_releaserc(
-                    changelog, github_release, public, arch, package_to_build, package_dir
+                    changelog,
+                    github_release,
+                    public,
+                    arch,
+                    package_to_build,
+                    package_dir,
+                    ros_distro,
                 )
                 with open(package_info.package_path / ".releaserc", "w+") as f:
                     f.write(json.dumps(releaserc, indent=4))
@@ -509,7 +524,13 @@ class Release(PlatformCliGroup):
             help="The directory to release packages from. If not set, the root of the repo will be used",
             default="./",
         )
-        def deb_prepare(version: str, arch: List[Architecture], package: str, package_dir: str):  # type: ignore
+        @click.option(
+            "--ros-distro",
+            type=str,
+            help="The ROS2 distro to build for. eg) foxy, galactic",
+            default="iron",
+        )
+        def deb_prepare(version: str, arch: List[Architecture], package: str, package_dir: str, ros_distro: str):  # type: ignore
             """Prepares the release by building the debian package inside a docker container"""
             docker_platforms = [f"linux/{a.value}" for a in arch]
             echo(f"Preparing to build .deb for {[a.value for a in arch]}", "blue")
@@ -582,6 +603,7 @@ class Release(PlatformCliGroup):
                     "API_TOKEN_GITHUB": os.environ["API_TOKEN_GITHUB"],
                     "PLATFORM_MODULE": package_info.module_info.platform_module_name,
                     "PACKAGE_DIR": package_dir,
+                    "ROS_DISTRO": ros_distro,
                     # Note we pass the PACKAGE_NAME here so we can rosdep install and build only the package we want
                     # If we don't pass this, it will try to build all packages in the workspace
                     # When in MULTI mode, we want to build all packages without installing deps / building each package
