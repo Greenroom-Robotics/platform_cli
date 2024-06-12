@@ -1,3 +1,10 @@
+## [1.4.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.3.3...v1.4.0) (2024-06-12)
+
+
+### Features
+
+* add ros_distro support to release ([3529d5d](https://github.com/Greenroom-Robotics/platform_cli/commit/3529d5dcf4db6ccdcc76440d56f5c01abd6434c8))
+
 ## [1.3.3](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.3.2...v1.3.3) (2024-03-01)
 
 
