@@ -238,7 +238,8 @@ class Packaging(PlatformCliGroup):
             """Pushes to the GR apt repo"""
             attempt = 0
             while True:
-                call("git pull --rebase", cwd=GR_APT_REPO_PATH)
+                call("git fetch", cwd=GR_APT_REPO_PATH)
+                call("git rebase -Xtheirs origin/main", cwd=GR_APT_REPO_PATH)
                 ret = call("git push", cwd=GR_APT_REPO_PATH, abort=False)
 
                 if ret.returncode == 0:
