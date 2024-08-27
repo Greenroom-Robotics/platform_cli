@@ -147,7 +147,7 @@ class Packaging(PlatformCliGroup):
             default="debs",
             help="The output directory for the debs",
         )
-        @click.option("--no-tests", type=bool, default=True)
+        @click.option("--no-tests", type=bool, is_flag=True, default=True)
         def build(version: str, output: str, no_tests: bool):  # type: ignore reportUnusedFunction
             """Builds the package using bloom"""
 
@@ -269,7 +269,7 @@ class Packaging(PlatformCliGroup):
         def apt_add(sparse: bool, deb: str):  # type: ignore reportUnusedFunction
             """Adds a .deb to the GR apt repo"""
 
-            if not GR_APT_REPO_PATH:
+            if not GR_APT_REPO_PATH.exists():
                 raise click.ClickException("GR apt repo has not been cloned.")
 
             if deb:
