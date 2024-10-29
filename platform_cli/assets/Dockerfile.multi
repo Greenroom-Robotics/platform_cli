@@ -1,4 +1,4 @@
-ARG ROS_DISTRO=iron
+ARG ROS_DISTRO=${ROS_DISTRO:-iron}
 
 FROM ghcr.io/greenroom-robotics/ros_builder:${ROS_DISTRO}-latest
 
@@ -43,7 +43,7 @@ RUN source ${ROS_OVERLAY}/setup.sh && platform ros build --package=${PACKAGE_NAM
 RUN --mount=type=cache,target=/home/ros/.cache/pip,sharing=locked \
   platform ros install_poetry_deps
 
-ENV ROS_OVERLAY /opt/greenroom/${PLATFORM_MODULE}
+ENV ROS_OVERLAY=/opt/greenroom/${PLATFORM_MODULE}
 RUN echo 'source ${ROS_OVERLAY}/setup.sh' >> ~/.profile
 
 CMD tail -f /dev/null
