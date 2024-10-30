@@ -1,6 +1,7 @@
 import click
 import shutil
 
+from glob import glob
 import os
 from typing import List, Optional, Dict, Iterable, Any
 from enum import Enum
@@ -41,35 +42,46 @@ class PackageInfo:
     package_path: Path
     package_name: str
     package_version: str
-    module_info: ModuleInfo
+    module_info: Optional[ModuleInfo]
 
 
 def check_parents_for_file(filename: str, path: Optional[Path] = None) -> Path:
     """Checks each parent directory for a file"""
     current_path = path if path else Path.cwd()
+
     while current_path.exists():
         file_path = current_path / filename
         if file_path.exists():
             return file_path.parent
-        current_path = current_path.parent
+
+        if current_path == current_path.parent:
+            break
+        else:
+            current_path = current_path.parent
 
     raise Exception(f"Could not find {filename} in any parent directory")
 
 
-def get_module_info(path: Optional[Path] = None) -> ModuleInfo:
+def get_module_info(path: Optional[Path] = None) -> Optional[ModuleInfo]:
     """
     Returns the module info for the directory (or CWD).
     """
-    platform_module_path = check_parents_for_file(".git", path)
-    platform_module_name = platform_module_path.name
 
-    return ModuleInfo(
-        platform_module_path=platform_module_path,
-        platform_module_name=platform_module_name,
-    )
+    try:
+        platform_module_path = check_parents_for_file(".git", path)
+        platform_module_name = platform_module_path.name
+
+        return ModuleInfo(
+            platform_module_path=platform_module_path,
+            platform_module_name=platform_module_name,
+        )
+    except Exception:
+        return None
 
 
-def get_package_info(package_path: Optional[Path] = None) -> PackageInfo:
+def get_package_info(
+    package_path: Optional[Path] = None, obtain_module_info: bool = True
+) -> PackageInfo:
     """
     Returns the package info for the directory (or CWD if no path provided).
     This assumes the cwd is a package. It will find out the name of the platform module.
@@ -86,7 +98,7 @@ def get_package_info(package_path: Optional[Path] = None) -> PackageInfo:
         package_path=package_path,
         package_name=get_package_name_from_package_xml(package_path / "package.xml"),
         package_version=get_package_version_from_package_xml(package_path / "package.xml"),
-        module_info=get_module_info(package_path),
+        module_info=get_module_info(package_path) if obtain_module_info else None,
     )
 
 
@@ -162,17 +174,22 @@ def get_package_version_from_package_xml(package_xml: Path) -> str:
     return root.find("version").text  # type: ignore
 
 
-def find_packages(path: Optional[Path] = None) -> Dict[str, PackageInfo]:
+def find_packages(path: Optional[Path] = None, module_info: bool = True) -> Dict[str, PackageInfo]:
     """
     Finds all the packages in the given path
     """
 
     path = path if path else Path.cwd()
-    package_xmls = path.glob("**/package.xml")
+
+    # Path.glob does not seem to traverse into symlink directories
+    package_xmls = [Path(p) for p in glob(f"{path}/**/package.xml", recursive=True)]
 
     packages = {}
     for package_xml in package_xmls:
-        package = get_package_info(package_xml.parent)
+        if package_xml.parent.parent.name == "share":
+            # this package is inside an install directory, so ignore it
+            continue
+        package = get_package_info(package_xml.parent, module_info)
         packages[package.package_name] = package
 
     return packages
