@@ -14,6 +14,8 @@ from python_on_whales.components.buildx.imagetools.models import Manifest
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.helpers import echo, call, LogLevels
 
+from platform_cli.groups.packaging import apt_clone, apt_push, apt_add
+
 DEBS_DIRECTORY = "debs"
 DOCKER_REGISTRY = "localhost:5000"
 
@@ -644,12 +646,12 @@ class Release(PlatformCliGroup):
             """Publishes the deb to the apt repo"""
             try:
                 echo("Publishing .deb to apt repo...")
-                call(f"platform pkg apt-clone --public {public}")
+                apt_clone(public)
 
                 debs_folder = Path.cwd() / DEBS_DIRECTORY
 
-                call("platform pkg apt-add", cwd=Path(debs_folder))
-                call("platform pkg apt-push")
+                apt_add(debs_folder)
+                apt_push()
             except Exception as e:
                 echo("Failed to publish .deb", "red", level=LogLevels.ERROR)
                 raise e
