@@ -96,7 +96,7 @@ def apt_push():
 def apt_add(deb: Optional[Path]=None, sparse: bool=False):
     """Adds a .deb to the GR apt repo"""
 
-    if not GR_APT_REPO_PATH:
+    if not GR_APT_REPO_PATH.exists():
         raise click.ClickException("GR apt repo has not been cloned.")
 
     if deb:
@@ -290,7 +290,7 @@ class Packaging(PlatformCliGroup):
         @pkg.command(name="apt-update")
         def apt_update():  # type: ignore reportUnusedFunction
             """Update the GR apt repo"""
-            if not GR_APT_REPO_PATH:
+            if not GR_APT_REPO_PATH.exists():
                 raise click.ClickException("GR apt repo has not been cloned.")
             call("git pull --rebase", cwd=GR_APT_REPO_PATH)
 
