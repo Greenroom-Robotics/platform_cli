@@ -53,7 +53,7 @@ def check_parents_for_file(filename: str, path: Optional[Path] = None) -> Path:
         file_path = current_path / filename
         if file_path.exists():
             return file_path.parent
-        
+
         if current_path == current_path.parent:
             break
         else:
@@ -79,7 +79,9 @@ def get_module_info(path: Optional[Path] = None) -> Optional[ModuleInfo]:
         return None
 
 
-def get_package_info(package_path: Optional[Path] = None, obtain_module_info: bool=True) -> PackageInfo:
+def get_package_info(
+    package_path: Optional[Path] = None, obtain_module_info: bool = True
+) -> PackageInfo:
     """
     Returns the package info for the directory (or CWD if no path provided).
     This assumes the cwd is a package. It will find out the name of the platform module.
@@ -172,7 +174,7 @@ def get_package_version_from_package_xml(package_xml: Path) -> str:
     return root.find("version").text  # type: ignore
 
 
-def find_packages(path: Optional[Path] = None, module_info: bool=True) -> Dict[str, PackageInfo]:
+def find_packages(path: Optional[Path] = None, module_info: bool = True) -> Dict[str, PackageInfo]:
     """
     Finds all the packages in the given path
     """

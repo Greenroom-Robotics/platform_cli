@@ -60,7 +60,7 @@ def get_apt_repo_url(public: bool = False) -> str:
     return f"git@github.com:{packages_repo}.git"
 
 
-def apt_clone(public: bool=False, sparse: bool=False):
+def apt_clone(public: bool = False, sparse: bool = False):
     """Checks out the GR apt repo"""
     if GR_APT_REPO_PATH.is_dir():
         echo(f"Packages repo has already been cloned to {GR_APT_REPO_PATH}", "blue")
@@ -93,7 +93,7 @@ def apt_push():
             raise click.ClickException("Failed to push to apt repo")
 
 
-def apt_add(deb: Optional[Path]=None, sparse: bool=False):
+def apt_add(deb: Optional[Path] = None, sparse: bool = False):
     """Adds a .deb to the GR apt repo"""
 
     if not GR_APT_REPO_PATH.exists():
@@ -121,6 +121,7 @@ def apt_add(deb: Optional[Path]=None, sparse: bool=False):
         f"git commit -a -m 'feat: add debian package: {' '.join(d.name for d in debs)}'",
         cwd=GR_APT_REPO_PATH,
     )
+
 
 class Packaging(PlatformCliGroup):
     def create(self, cli: click.Group):

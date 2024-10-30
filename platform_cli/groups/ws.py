@@ -14,8 +14,9 @@ from python_on_whales import docker
 
 BASE_IMAGE = "ghcr.io/greenroom-robotics/ros_builder:iron-latest"
 
+
 def get_auth_file() -> Dict[str, str]:
-    entries = (Path().home()/ ".gr" / "auth").read_text().strip().split("\n")
+    entries = (Path().home() / ".gr" / "auth").read_text().strip().split("\n")
     matches = [re.match(r"export (?P<key>\w+)=(?P<value>.+)", e) for e in entries]
     return {m.group("key"): m.group("value") for m in matches}
 
@@ -24,14 +25,19 @@ def get_system_platform_path() -> Path:
     return Path.home() / "work/platform"
 
 
-def ws_symlinks_to_platform_paths(workspace_path: Path, packages: Dict[Any, Any]) -> Tuple[Dict[str, Path], Dict[str, Path]]:
+def ws_symlinks_to_platform_paths(
+    workspace_path: Path, packages: Dict[Any, Any]
+) -> Tuple[Dict[str, Path], Dict[str, Path]]:
     platform_paths = {}
     other_paths = {}
     for path in (workspace_path / "src").iterdir():
         if path.is_symlink():
             pkg_name = path.name
             pkg_path = path.resolve()
-            if pkg_path.parts[:len(get_system_platform_path().parts)] != get_system_platform_path().parts:
+            if (
+                pkg_path.parts[: len(get_system_platform_path().parts)]
+                != get_system_platform_path().parts
+            ):
                 echo(f"Non platform based package: {pkg_path}", "yellow")
                 other_paths[pkg_name] = pkg_path
             else:
@@ -50,8 +56,7 @@ class Workspace(PlatformCliGroup):
         def base_image():
 
             setup_proxy().callback()
-            
-        
+
         @ws.command(name="setup-proxy")
         @click.argument("container_name", type=str)
         def setup_proxy(container_name: str):  # type: ignore
@@ -101,7 +106,9 @@ class Workspace(PlatformCliGroup):
                 echo(f"Container '{container_name}' already exists - removing", "red")
                 container.remove(force=True)
 
-            echo(f"Creating container '{container_name}' for workspace {workspace_path}...", "green")
+            echo(
+                f"Creating container '{container_name}' for workspace {workspace_path}...", "green"
+            )
 
             # workspace_volume = docker.volume.create(f"{container_name}_src", "local",
             #                                         options={
@@ -110,23 +117,29 @@ class Workspace(PlatformCliGroup):
             #                                             "device": "overlay"
             #                                         })
 
+            other_volumes = [
+                (p, container_other_path / pkg, "rw") for pkg, p in other_pkgs.items()
+            ]
 
-            other_volumes = [(p, container_other_path / pkg, "rw") for pkg, p in other_pkgs.items()]
-
-            container = docker.run(base_image,
-                                   ["tail", "-f", "/dev/null"],
+            container = docker.run(
+                base_image,
+                ["tail", "-f", "/dev/null"],
                 name=container_name,
                 envs=get_auth_file(),
                 volumes=[
-                # (workspace_path / "src", "/home/ros/ws/src",  "ro"),
-                         (system_platform_path, container_platform_path, "rw"),
-                          ] + other_volumes,
+                    # (workspace_path / "src", "/home/ros/ws/src",  "ro"),
+                    (system_platform_path, container_platform_path, "rw"),
+                ]
+                + other_volumes,
                 workdir=container_home_path,
-                detach=True, remove=False
+                detach=True,
+                remove=False,
             )
 
             echo(f"Container '{container_name}' created", "green")
-            container.execute(["mkdir", "-p", "ws/src"], tty=True)  # , "chown", "ros:ros", "/home/ros/ws"
+            container.execute(
+                ["mkdir", "-p", "ws/src"], tty=True
+            )  # , "chown", "ros:ros", "/home/ros/ws"
 
             for p in platform_paths.values():
                 p_rel = container_platform_path / p.relative_to(system_platform_path)
@@ -136,10 +149,12 @@ class Workspace(PlatformCliGroup):
                 p_rel = container_other_path / p.name
                 container.execute(["ln", "-s", str(p_rel), "ws/src"], tty=True)
 
-            container.execute(["pip", "install", str(container_platform_path / "tools/platform_cli")], tty=True)
+            container.execute(
+                ["pip", "install", str(container_platform_path / "tools/platform_cli")], tty=True
+            )
             container.execute(["platform", "pkg", "setup"], tty=True)
             # container.execute(["platform", "pkg", "refresh-deps"], tty=True)
-            
+
             # how do we source the setup.bash files? needs to be ran as bash -l -c COMMAND
             # container.execute(["colcon", "build"], tty=True)
 
@@ -208,11 +223,18 @@ class Workspace(PlatformCliGroup):
             if package not in packages:
                 echo(f"Package '{package}' not found", "red")
                 return
-            
+
             rel_path = packages[package].package_path.relative_to(workspace_path)
 
-            container.execute(["platform", "pkg", "clean"], tty=True, workdir=container_ws / rel_path)
+            container.execute(
+                ["platform", "pkg", "clean"], tty=True, workdir=container_ws / rel_path
+            )
             if not no_rosdep:
-                container.execute(["platform", "pkg", "install-deps"], tty=True, workdir=container_ws / rel_path)
-            container.execute(["platform", "pkg", "build", "--version", version], tty=True, workdir=container_ws / rel_path)
-
+                container.execute(
+                    ["platform", "pkg", "install-deps"], tty=True, workdir=container_ws / rel_path
+                )
+            container.execute(
+                ["platform", "pkg", "build", "--version", version],
+                tty=True,
+                workdir=container_ws / rel_path,
+            )
