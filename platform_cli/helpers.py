@@ -29,11 +29,18 @@ class FileSystemEventHandlerDebounced(FileSystemEventHandler):
         # Kill existing process
         if type(self.process) is subprocess.Popen:
             self.is_terminating = True
-            click.echo(click.style("Killing existing process...", fg="red"))
+            click.echo(click.style("Sending SIGINT to process...", fg="red"))
             self.process.send_signal(signal.SIGINT)
-            self.process.wait()
+
+            try:
+                self.process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                click.echo(click.style("Sending SIGTERM to process...", fg="red"))
+                self.process.send_signal(signal.SIGTERM)
+                self.process.wait()
+
             self.process = None
-            click.echo(click.style("Killing existing process complete", fg="yellow"))
+            click.echo(click.style("Process has exited", fg="yellow"))
             self.is_terminating = False
 
     def start_process(self):
@@ -208,6 +215,8 @@ def start_watcher(
     try:
         while True:
             time.sleep(1)
+    except KeyboardInterrupt:
+        handler.kill_process()
     finally:
         observer.stop()
         observer.join()
@@ -242,6 +251,8 @@ def call(
             fg="blue",
         )
     )
+
+    proc = None
     if process:
         proc = subprocess.Popen(
             command, shell=True, executable="/bin/bash", cwd=cwd, env=env_extended
@@ -249,10 +260,27 @@ def call(
         return proc
 
     try:
-        proc = subprocess.run(
-            command, shell=True, executable="/bin/bash", cwd=cwd, check=abort, env=env_extended
-        )
-        return proc
+        with subprocess.Popen(
+            command, shell=True, executable="/bin/bash", cwd=cwd, env=env_extended
+        ) as process:
+            # this is the internal time to wait for the process to exit after SIGINT, and then SIGTERM is sent
+            process._sigint_wait_secs = 10.0
+            try:
+                stdout, stderr = process.communicate(input, timeout=None)
+            except Exception as e:  # Including KeyboardInterrupt, communicate handled that.
+                # looking at the python stdlib code, the SIGINT is already sent in the communicate/wait method
+                # so if we reach this point the process hasn't exited yet, so we need to send SIGTERM
+                print("Sending SIGTERM to process")
+                process.send_signal(signal.SIGTERM)
+                process.wait()
+                raise e
+            retcode = process.poll()
+            if abort and retcode:
+                raise subprocess.CalledProcessError(
+                    retcode, process.args, output=stdout, stderr=stderr
+                )
+        return subprocess.CompletedProcess(process.args, retcode, stdout, stderr)
+
     except subprocess.CalledProcessError as e:
         if retry > 0:
             click.echo(
