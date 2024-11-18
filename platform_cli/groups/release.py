@@ -332,6 +332,9 @@ class Release(PlatformCliGroup):
 
         docker_plaform = f"linux/{architecture.value}"
 
+        if not package_info.module_info:
+            raise Exception("Module info is required to build debs")
+
         package_relative_to_platform_module = package_info.package_path.relative_to(
             package_info.module_info.platform_module_path
         )
@@ -408,6 +411,9 @@ class Release(PlatformCliGroup):
 
             release_mode = self._get_release_mode()
             module_info = get_module_info()
+
+            if not module_info:
+                raise Exception("Could not find module info")
 
             # If a Dockerfile does not exist in the module root, create it
             docker_file_exists = (module_info.platform_module_path / "Dockerfile").exists()
@@ -563,6 +569,10 @@ class Release(PlatformCliGroup):
                 package_info = packages[package]
             else:
                 package_info = get_package_info()
+
+            if not package_info.module_info:
+                raise Exception("Module info is required to build debs")
+
             docker_image_name = self._get_docker_image_name(
                 package_info.module_info.platform_module_name
             )

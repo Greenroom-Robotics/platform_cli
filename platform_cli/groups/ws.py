@@ -8,9 +8,9 @@ import re
 from git import Repo
 from platform_cli.groups.release import find_packages
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import get_env, echo, call
+from platform_cli.helpers import echo
 
-from python_on_whales import docker
+from python_on_whales import docker, Container
 
 BASE_IMAGE = "ghcr.io/greenroom-robotics/ros_builder:iron-latest"
 
@@ -18,7 +18,7 @@ BASE_IMAGE = "ghcr.io/greenroom-robotics/ros_builder:iron-latest"
 def get_auth_file() -> Dict[str, str]:
     entries = (Path().home() / ".gr" / "auth").read_text().strip().split("\n")
     matches = [re.match(r"export (?P<key>\w+)=(?P<value>.+)", e) for e in entries]
-    return {m.group("key"): m.group("value") for m in matches}
+    return {m.group("key"): m.group("value") for m in matches if m}
 
 
 def get_system_platform_path() -> Path:
@@ -135,6 +135,10 @@ class Workspace(PlatformCliGroup):
                 detach=True,
                 remove=False,
             )
+
+            if not isinstance(container, Container):
+                # Handle other possible return types
+                raise TypeError("Expected a Container, but got a different type")
 
             echo(f"Container '{container_name}' created", "green")
             container.execute(
