@@ -121,7 +121,7 @@ class Workspace(PlatformCliGroup):
                 (p, container_other_path / pkg, "rw") for pkg, p in other_pkgs.items()
             ]
 
-            container: Container = docker.run(
+            container = docker.run(
                 base_image,
                 ["tail", "-f", "/dev/null"],
                 name=container_name,
