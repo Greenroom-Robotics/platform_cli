@@ -103,7 +103,7 @@ def get_env(env_type: RosEnv, abort: bool = True) -> RosEnv:
 
 
 def get_ros_env(abort: bool = True) -> RosEnv:
-    return get_env(RosEnv, abort)
+    return get_env(RosEnv, abort)  # type: ignore
 
 
 def is_ci_environment() -> bool:
