@@ -1,3 +1,19 @@
+## [1.5.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.4.0...v1.5.0) (2024-11-18)
+
+
+### Features
+
+* workspace functionality aka russ's super cool secret branch ([#7](https://github.com/Greenroom-Robotics/platform_cli/issues/7)) ([b4cd70b](https://github.com/Greenroom-Robotics/platform_cli/commit/b4cd70bf9107ca9019e34326abfb68eb1cb8bf04))
+
+
+### Bug Fixes
+
+* don't call self, use functions instead ([2a1d993](https://github.com/Greenroom-Robotics/platform_cli/commit/2a1d993930ba735eac33601a36faeef75ceccc3c))
+* process calling now sends SIGINT, SIGTERM correctly ([c51d487](https://github.com/Greenroom-Robotics/platform_cli/commit/c51d487bb4544ddf6de13d677293997660130668))
+* typing issues ([#8](https://github.com/Greenroom-Robotics/platform_cli/issues/8)) ([5af5f83](https://github.com/Greenroom-Robotics/platform_cli/commit/5af5f83c0ddd5b0e2928f3302e854f250df11f53))
+* update Dockerfile assets ([8653dd6](https://github.com/Greenroom-Robotics/platform_cli/commit/8653dd6b22d8f6a304f9197e875c949dded0ad5e))
+* use merge strategy ([b1d90dd](https://github.com/Greenroom-Robotics/platform_cli/commit/b1d90ddc64b49e95e4405fcdc837dca22e027f88))
+
 ## [1.4.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.3.3...v1.4.0) (2024-06-12)
 
 
