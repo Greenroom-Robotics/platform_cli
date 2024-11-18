@@ -54,7 +54,7 @@ class FileSystemEventHandlerDebounced(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        file_type = Path(event.src_path).suffix
+        file_type = Path(str(event.src_path)).suffix
 
         # Ignore files that don't match the file types
         if file_type not in self.file_types:
@@ -93,13 +93,13 @@ def check_directory_ownership(path: Path) -> bool:
     return stat.st_uid == os.getuid() and stat.st_gid == os.getgid()
 
 
-def get_env(env_type: Union[Type[TypedDict], Type[TypedDict]], abort: bool = True) -> TypedDict:
+def get_env(env_type: RosEnv, abort: bool = True) -> RosEnv:
     if abort:
         for env in env_type.__required_keys__:  # type: ignore
             if env not in os.environ:
                 raise click.ClickException(f"{env} environment variable must be set.")
 
-    return cast(env_type, {k: os.environ[k] for k in env_type.__required_keys__})
+    return cast(env_type, {k: os.environ[k] for k in env_type.__required_keys__})  # type: ignore
 
 
 def get_ros_env(abort: bool = True) -> RosEnv:
@@ -205,7 +205,7 @@ def start_watcher(
 
     for folder in folders:
         # Watch all folders in the current directory
-        observer.schedule(handler, cwd / folder, recursive=True)
+        observer.schedule(handler, str(cwd / folder), recursive=True)
 
     observer.start()
 
@@ -262,24 +262,24 @@ def call(
     try:
         with subprocess.Popen(
             command, shell=True, executable="/bin/bash", cwd=cwd, env=env_extended
-        ) as process:
+        ) as proc:
             # this is the internal time to wait for the process to exit after SIGINT, and then SIGTERM is sent
-            process._sigint_wait_secs = 10.0
+            proc._sigint_wait_secs = 10.0  # type: ignore
             try:
-                stdout, stderr = process.communicate(input, timeout=None)
+                stdout, stderr = proc.communicate()
             except Exception as e:  # Including KeyboardInterrupt, communicate handled that.
                 # looking at the python stdlib code, the SIGINT is already sent in the communicate/wait method
                 # so if we reach this point the process hasn't exited yet, so we need to send SIGTERM
                 print("Sending SIGTERM to process")
-                process.send_signal(signal.SIGTERM)
-                process.wait()
+                proc.send_signal(signal.SIGTERM)
+                proc.wait()
                 raise e
-            retcode = process.poll()
+            retcode = proc.poll() or 0
             if abort and retcode:
                 raise subprocess.CalledProcessError(
-                    retcode, process.args, output=stdout, stderr=stderr
+                    retcode, proc.args, output=stdout, stderr=stderr
                 )
-        return subprocess.CompletedProcess(process.args, retcode, stdout, stderr)
+        return subprocess.CompletedProcess(proc.args, retcode, stdout, stderr)
 
     except subprocess.CalledProcessError as e:
         if retry > 0:
