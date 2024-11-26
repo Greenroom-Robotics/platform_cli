@@ -24,11 +24,11 @@
         "@semantic-release/release-notes-generator": "^10.0.3",
         "conventional-changelog-conventionalcommits": "^5.0.0",
         "semantic-release": "https://github.com/Greenroom-Robotics/semantic-release.git#v19.0.5-patched-testing",
-        "@qiwi/multi-semantic-release": "^6.5.1",
+        "@qiwi/multi-semantic-release": "https://github.com/Greenroom-Robotics/multi-semantic-release.git#v6.5.1-patched",
         "@semantic-release/exec": "^6.0.3"
     },
     "resolutions": {
-        "semantic-release": "https://github.com/Greenroom-Robotics/semantic-release.git#bf71297688a238d8f363f3cbffe126baf9b10f57",
+        "semantic-release": "https://github.com/Greenroom-Robotics/semantic-release.git#v19.0.5-patched-testing",
         "@semantic-release/github": "https://github.com/Greenroom-Robotics/semantic-release-github#master"
     }
 }

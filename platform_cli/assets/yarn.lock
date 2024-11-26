@@ -354,10 +354,9 @@
   dependencies:
     "@octokit/openapi-types" "^16.0.0"
 
-"@qiwi/multi-semantic-release@^6.5.1":
+"@qiwi/multi-semantic-release@https://github.com/Greenroom-Robotics/multi-semantic-release.git#v6.5.1-patched":
   version "6.5.1"
-  resolved "https://registry.yarnpkg.com/@qiwi/multi-semantic-release/-/multi-semantic-release-6.5.1.tgz#adedad01f28d93a310d1840b1f0bcdc1e1b5373a"
-  integrity sha512-11W3bg190TUPZUUJa3TkTCPwLHPQpM9Z/Jl3Tj6VVQikXdazrONPw/ng4vyeprrlte97NZM5nvrWNikX+nF1mw==
+  resolved "https://github.com/Greenroom-Robotics/multi-semantic-release.git#367e959c828d12c8ee55c3deb72e169c4327fa86"
   dependencies:
     "@manypkg/get-packages" "^1.1.3"
     "@semrel-extra/topo" "^1.3.0"
@@ -3084,7 +3083,7 @@ safe-buffer@~5.2.0:
   resolved "https://registry.yarnpkg.com/safer-buffer/-/safer-buffer-2.1.2.tgz#44fa161b0187b9549dd84bb91802f9bd8385cd6a"
   integrity sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==
 
-semantic-release@^19.0.2, "semantic-release@https://github.com/Greenroom-Robotics/semantic-release.git#bf71297688a238d8f363f3cbffe126baf9b10f57", "semantic-release@https://github.com/Greenroom-Robotics/semantic-release.git#v19.0.5-patched-testing":
+semantic-release@^19.0.2, "semantic-release@https://github.com/Greenroom-Robotics/semantic-release.git#v19.0.5-patched-testing":
   version "0.0.0-development"
   resolved "https://github.com/Greenroom-Robotics/semantic-release.git#bf71297688a238d8f363f3cbffe126baf9b10f57"
   dependencies:
