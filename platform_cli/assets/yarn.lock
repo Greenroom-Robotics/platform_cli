@@ -3084,7 +3084,7 @@ safe-buffer@~5.2.0:
   resolved "https://registry.yarnpkg.com/safer-buffer/-/safer-buffer-2.1.2.tgz#44fa161b0187b9549dd84bb91802f9bd8385cd6a"
   integrity sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==
 
-semantic-release@^19.0.2, "semantic-release@https://github.com/Greenroom-Robotics/semantic-release.git#bf71297688a238d8f363f3cbffe126baf9b10f57":
+semantic-release@^19.0.2, "semantic-release@https://github.com/Greenroom-Robotics/semantic-release.git#bf71297688a238d8f363f3cbffe126baf9b10f57", "semantic-release@https://github.com/Greenroom-Robotics/semantic-release.git#v19.0.5-patched-testing":
   version "0.0.0-development"
   resolved "https://github.com/Greenroom-Robotics/semantic-release.git#bf71297688a238d8f363f3cbffe126baf9b10f57"
   dependencies:
