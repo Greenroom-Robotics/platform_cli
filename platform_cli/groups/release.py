@@ -468,13 +468,22 @@ class Release(PlatformCliGroup):
             help="The ROS2 distro to build for. eg) foxy, galactic",
             default="iron",
         )
+        @click.option(
+            "--no-tag",
+            type=bool,
+            help="Should semantic-release NOT tag the release",
+            default=False,
+        )
         @click.argument(
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, args: List[str]):  # type: ignore
+        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, no_tag: bool, args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
+
+            if no_tag:
+                args_str += " --no-tag"
 
             packages = find_packages(Path.cwd() / package_dir)
 
