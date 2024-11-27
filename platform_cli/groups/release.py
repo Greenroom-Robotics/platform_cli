@@ -500,7 +500,7 @@ class Release(PlatformCliGroup):
                 package_to_build = package_name if package else None
                 releaserc = get_releaserc(
                     changelog,
-                    github_release,
+                    github_release and not skip_tag,
                     public,
                     arch,
                     package_to_build,
