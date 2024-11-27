@@ -392,7 +392,7 @@
 
 "@qiwi/multi-semantic-release@https://github.com/Greenroom-Robotics/multi-semantic-release.git#v6.5.1-patched":
   version "6.5.2"
-  resolved "https://github.com/Greenroom-Robotics/multi-semantic-release.git#424bec248c1f892e4a2db248583fba4404f238a7"
+  resolved "https://github.com/Greenroom-Robotics/multi-semantic-release.git#319148f8bc0b4bd77bb0e6ffd25b250a9f738ec2"
   dependencies:
     "@manypkg/get-packages" "^1.1.3"
     "@semrel-extra/topo" "^1.3.0"
@@ -3161,7 +3161,7 @@ safe-buffer@~5.2.0:
 
 semantic-release@^19.0.2, "semantic-release@https://github.com/Greenroom-Robotics/semantic-release.git#v19.0.5-patched-testing":
   version "19.0.5"
-  resolved "https://github.com/Greenroom-Robotics/semantic-release.git#06f07876e090bcc3b04eadec8c4dec63c21af38a"
+  resolved "https://github.com/Greenroom-Robotics/semantic-release.git#53d81662490f5d49584ca52ab0ecf125e02c9f26"
   dependencies:
     "@semantic-release/commit-analyzer" "^9.0.2"
     "@semantic-release/error" "^3.0.0"

@@ -110,6 +110,7 @@ def get_releaserc(
     package: Optional[str] = None,
     package_dir: Optional[str] = None,
     ros_distro: Optional[str] = None,
+    skip_build: bool = False,
 ):
     """
     Returns the releaserc with the plugins configured according to the arguments
@@ -135,13 +136,14 @@ def get_releaserc(
     add_plugin("@semantic-release/commit-analyzer", {"preset": "conventionalcommits"})
     add_plugin("@semantic-release/release-notes-generator", {"preset": "conventionalcommits"})
     add_plugin("@semantic-release/changelog", {})
-    add_plugin(
-        "@semantic-release/exec",
-        {
-            "prepareCmd": f"platform release deb-prepare {prepare_cmd_args}",
-            "publishCmd": f"platform release deb-publish --public {public}",
-        },
-    )
+    if not skip_build:
+        add_plugin(
+            "@semantic-release/exec",
+            {
+                "prepareCmd": f"platform release deb-prepare {prepare_cmd_args}",
+                "publishCmd": f"platform release deb-publish --public {public}",
+            },
+        )
     if github_release:
         add_plugin(
             "@semantic-release/github",
@@ -469,7 +471,7 @@ class Release(PlatformCliGroup):
             default="iron",
         )
         @click.option(
-            "--no-tag",
+            "--skip-tag",
             type=bool,
             help="Should semantic-release NOT tag the release",
             default=False,
@@ -478,12 +480,12 @@ class Release(PlatformCliGroup):
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, no_tag: bool, args: List[str]):  # type: ignore
+        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, skip_tag: bool, args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
 
-            if no_tag:
-                args_str += " --no-tag"
+            if skip_tag:
+                args_str += " --skip-tag"
 
             packages = find_packages(Path.cwd() / package_dir)
 
