@@ -476,11 +476,17 @@ class Release(PlatformCliGroup):
             help="Should semantic-release NOT tag the release",
             default=False,
         )
+        @click.option(
+            "--skip-build",
+            type=bool,
+            help="Should platform NOT build the packages",
+            default=False,
+        )
         @click.argument(
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, skip_tag: bool, args: List[str]):  # type: ignore
+        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, skip_tag: bool, skip_build: bool, args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
 
@@ -506,6 +512,7 @@ class Release(PlatformCliGroup):
                     package_to_build,
                     package_dir,
                     ros_distro,
+                    skip_build,
                 )
                 with open(package_info.package_path / ".releaserc", "w+") as f:
                     f.write(json.dumps(releaserc, indent=4))
