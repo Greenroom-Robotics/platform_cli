@@ -110,6 +110,7 @@ def get_releaserc(
     package: Optional[str] = None,
     package_dir: Optional[str] = None,
     ros_distro: Optional[str] = None,
+    skip_build: bool = False,
 ):
     """
     Returns the releaserc with the plugins configured according to the arguments
@@ -135,13 +136,14 @@ def get_releaserc(
     add_plugin("@semantic-release/commit-analyzer", {"preset": "conventionalcommits"})
     add_plugin("@semantic-release/release-notes-generator", {"preset": "conventionalcommits"})
     add_plugin("@semantic-release/changelog", {})
-    add_plugin(
-        "@semantic-release/exec",
-        {
-            "prepareCmd": f"platform release deb-prepare {prepare_cmd_args}",
-            "publishCmd": f"platform release deb-publish --public {public}",
-        },
-    )
+    if not skip_build:
+        add_plugin(
+            "@semantic-release/exec",
+            {
+                "prepareCmd": f"platform release deb-prepare {prepare_cmd_args}",
+                "publishCmd": f"platform release deb-publish --public {public}",
+            },
+        )
     if github_release:
         add_plugin(
             "@semantic-release/github",
@@ -468,13 +470,28 @@ class Release(PlatformCliGroup):
             help="The ROS2 distro to build for. eg) foxy, galactic",
             default="iron",
         )
+        @click.option(
+            "--skip-tag",
+            type=bool,
+            help="Should semantic-release NOT tag the release",
+            default=False,
+        )
+        @click.option(
+            "--skip-build",
+            type=bool,
+            help="Should platform NOT build the packages",
+            default=False,
+        )
         @click.argument(
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, args: List[str]):  # type: ignore
+        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, skip_tag: bool, skip_build: bool, args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
+
+            if skip_tag:
+                args_str += " --skip-tag"
 
             packages = find_packages(Path.cwd() / package_dir)
 
@@ -489,12 +506,13 @@ class Release(PlatformCliGroup):
                 package_to_build = package_name if package else None
                 releaserc = get_releaserc(
                     changelog,
-                    github_release,
+                    github_release and not skip_tag,
                     public,
                     arch,
                     package_to_build,
                     package_dir,
                     ros_distro,
+                    skip_build,
                 )
                 with open(package_info.package_path / ".releaserc", "w+") as f:
                     f.write(json.dumps(releaserc, indent=4))
@@ -504,8 +522,7 @@ class Release(PlatformCliGroup):
 
             if release_mode == ReleaseMode.SINGLE:
                 if len(arch) == 1:
-                    # If only one architecture is specified will append the architecture to the version
-                    args_str += "--tag-format='${version}-" + arch[0].value + "'"
+                    args_str += " --tag-format='${version}'"
                 echo(
                     "Release mode: SINGLE, running semantic-release for root package",
                     "blue",
@@ -513,8 +530,7 @@ class Release(PlatformCliGroup):
                 call(f"yarn semantic-release {args_str}")
             else:
                 if len(arch) == 1:
-                    # If only one architecture is specified will append the architecture to the version
-                    args_str += "--tag-format='${name}@${version}-" + arch[0].value + "'"
+                    args_str += " --tag-format='${name}@${version}'"
 
                 echo(
                     "Release mode: MULTI, running multi-semantic-release for root package",
