@@ -1,3 +1,16 @@
+## [1.6.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.5.0...v1.6.0) (2024-12-10)
+
+
+### Features
+
+* Post Build tagging in Semantic Release [sc-12927] ([#9](https://github.com/Greenroom-Robotics/platform_cli/issues/9)) ([3beb889](https://github.com/Greenroom-Robotics/platform_cli/commit/3beb88930a1b5f4835ba175d1b4b20dc69861ee6))
+
+
+### Bug Fixes
+
+* also set distro on the update command ([1170d28](https://github.com/Greenroom-Robotics/platform_cli/commit/1170d2851936c396a567e1bc98a1120d6d2e1c0d))
+* hack to bring iron back from the dead ([c92aedc](https://github.com/Greenroom-Robotics/platform_cli/commit/c92aedc03f9cf93cd2278ceb11e478cd025575a6))
+
 ## [1.5.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.4.0...v1.5.0) (2024-11-18)
 
 
