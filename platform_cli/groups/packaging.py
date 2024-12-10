@@ -192,7 +192,11 @@ class Packaging(PlatformCliGroup):
             # If we find a package with that name, only install the deps for that package
             from_paths = packages[package] if package else package_dir
             refresh_deps.callback()  # type: ignore
-            call(f"rosdep install -y --rosdistro {get_ros_distro()} --from-paths {from_paths} -i")
+            distro = get_ros_distro()
+            if distro == "iron":
+                distro = "iron --include-eol-distros"
+
+            call(f"rosdep install -y --rosdistro {distro} --from-paths {from_paths} -i")
 
         @pkg.command(name="get-sources")
         def get_sources():  # type: ignore reportUnusedFunction
