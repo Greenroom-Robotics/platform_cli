@@ -173,7 +173,10 @@ class Packaging(PlatformCliGroup):
         def refresh_deps():  # type: ignore reportUnusedFunction
             """Refresh rosdeps"""
             call("sudo apt-get update")
-            call("rosdep update")
+            distro = get_ros_distro()
+            if distro == "iron":
+                distro = "iron --include-eol-distros"
+            call(f"rosdep update --rosdistro {distro}")
 
         @pkg.command(name="install-deps")
         @click.option(
