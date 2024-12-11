@@ -251,9 +251,8 @@ class Packaging(PlatformCliGroup):
             bloom_args += " --ignore-shlibs-missing-info"
 
             call(f"bloom-generate {pkg_type} --ros-distro {get_ros_distro()} {bloom_args}")
-
-            cpus = cpu_count() if cpu_count() else 1
-            call(f"fakeroot debian/rules binary -j{cpus}")
+            cores = cpu_count() if cpu_count() else 1
+            call(f"DEB_BUILD_OPTIONS=parallel={cores} fakeroot debian/rules binary")
 
             # the .deb and .ddeb files are in the parent directory
             # move .deb/.ddeb files into the output folder

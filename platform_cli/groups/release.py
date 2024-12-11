@@ -357,16 +357,17 @@ class Release(PlatformCliGroup):
             docker_image_name_with_digest,
             [
                 "/bin/bash",
+                "-l",
                 "-c",
-                f"source /home/ros/.profile && platform pkg build --version {version} --output {DEBS_DIRECTORY} && platform pkg clean",
+                f"platform pkg build --version {version} --output {DEBS_DIRECTORY} && platform pkg clean",
             ],
-            interactive=True,
             workdir=docker_working_dir,
             volumes=[
                 # We only mount the /debs directory for each package
                 (host_debs_path, docker_debs_path)
             ],
             platform=docker_plaform,
+            tty=True,
         )
 
     def create(self, cli: click.Group):
