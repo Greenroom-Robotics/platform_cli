@@ -361,7 +361,6 @@ class Release(PlatformCliGroup):
                 "-c",
                 f"platform pkg build --version {version} --output {DEBS_DIRECTORY} && platform pkg clean",
             ],
-            interactive=True,
             workdir=docker_working_dir,
             volumes=[
                 # We only mount the /debs directory for each package
