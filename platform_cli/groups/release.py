@@ -353,6 +353,11 @@ class Release(PlatformCliGroup):
         # Make the .debs directory writable by all users
         os.chmod(host_debs_path, 0o777)
 
+        envs = {}
+        if os.environ.get('RUNNER_ARCH', None) == 'ARM64':
+            # TODO(russkel): There is no way to get the runner name aka buildjet_ubuntuXXXX_arm from env vars
+            envs['BUILDJET_THROTTLE'] = '1'
+
         docker.run(
             docker_image_name_with_digest,
             [
@@ -368,6 +373,7 @@ class Release(PlatformCliGroup):
             ],
             platform=docker_plaform,
             tty=True,
+            envs=envs,
         )
 
     def create(self, cli: click.Group):

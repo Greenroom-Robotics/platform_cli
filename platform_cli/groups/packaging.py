@@ -4,6 +4,7 @@ import click
 from psutil import cpu_count
 import shutil
 import os
+import math
 
 from platform_cli.groups.base import PlatformCliGroup
 from platform_cli.helpers import call, stdout_call, echo
@@ -251,8 +252,14 @@ class Packaging(PlatformCliGroup):
             bloom_args += " --ignore-shlibs-missing-info"
 
             call(f"bloom-generate {pkg_type} --ros-distro {get_ros_distro()} {bloom_args}")
-            cores = cpu_count() if cpu_count() else 1
-            call(f"DEB_BUILD_OPTIONS=parallel={cores} fakeroot debian/rules binary")
+
+            jobs = cpu_count() if cpu_count() else 1
+            if os.environ.get("BUILDJET_THROTTLE", None):
+                # the number of RAM to cores on the ARM runners are insufficient, so we can't have a 1:1 job:core ratio
+                echo("Throttling number of jobs due to Buildjet ARM64 Runner limitations", "yellow")
+                jobs = math.floor(jobs * 0.75)
+
+            call(f"DEB_BUILD_OPTIONS=parallel={jobs} fakeroot debian/rules binary")
 
             # the .deb and .ddeb files are in the parent directory
             # move .deb/.ddeb files into the output folder
