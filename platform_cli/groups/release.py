@@ -3,7 +3,7 @@ import shutil
 
 from glob import glob
 import os
-from typing import List, Optional, Dict, Iterable, Any
+from typing import List, Optional, Dict, Iterable, Any, Union
 from enum import Enum
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -111,6 +111,7 @@ def get_releaserc(
     package_dir: Optional[str] = None,
     ros_distro: Optional[str] = None,
     skip_build: bool = False,
+    branches: Optional[List[str]] = None,
 ):
     """
     Returns the releaserc with the plugins configured according to the arguments
@@ -126,7 +127,7 @@ def get_releaserc(
         prepare_cmd_args += f" --ros-distro={ros_distro}"
 
     releaserc = {
-        "branches": ["main", "master", {"name": "alpha", "prerelease": True}],
+        "branches": branches or ["main", "master", {"name": "alpha", "prerelease": True}],
         "plugins": [],
     }
 
@@ -354,9 +355,9 @@ class Release(PlatformCliGroup):
         os.chmod(host_debs_path, 0o777)
 
         envs = {}
-        if os.environ.get('RUNNER_ARCH', None) == 'ARM64':
+        if os.environ.get("RUNNER_ARCH", None) == "ARM64":
             # TODO(russkel): There is no way to get the runner name aka buildjet_ubuntuXXXX_arm from env vars
-            envs['BUILDJET_THROTTLE'] = '1'
+            envs["BUILDJET_THROTTLE"] = "1"
 
         docker.run(
             docker_image_name_with_digest,
@@ -489,14 +490,19 @@ class Release(PlatformCliGroup):
             help="Should platform NOT build the packages",
             default=False,
         )
+        @click.option(
+            "--branches",
+            type=str,
+            help="The branches to release on. Defaults to: main,master,alpha",
+        )
         @click.argument(
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, skip_tag: bool, skip_build: bool, args: List[str]):  # type: ignore
+        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, skip_tag: bool, skip_build: bool, branches: str, args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
-
+            branches_split = branches.split(",") if branches else None
             if skip_tag:
                 args_str += " --skip-tag"
 
@@ -520,6 +526,7 @@ class Release(PlatformCliGroup):
                     package_dir,
                     ros_distro,
                     skip_build,
+                    branches_split,
                 )
                 with open(package_info.package_path / ".releaserc", "w+") as f:
                     f.write(json.dumps(releaserc, indent=4))

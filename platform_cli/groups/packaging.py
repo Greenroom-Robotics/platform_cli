@@ -256,7 +256,9 @@ class Packaging(PlatformCliGroup):
             jobs = cpu_count() if cpu_count() else 1
             if os.environ.get("BUILDJET_THROTTLE", None):
                 # the number of RAM to cores on the ARM runners are insufficient, so we can't have a 1:1 job:core ratio
-                echo("Throttling number of jobs due to Buildjet ARM64 Runner limitations", "yellow")
+                echo(
+                    "Throttling number of jobs due to Buildjet ARM64 Runner limitations", "yellow"
+                )
                 jobs = math.floor(jobs * 0.75)
 
             call(f"DEB_BUILD_OPTIONS=parallel={jobs} fakeroot debian/rules binary")
