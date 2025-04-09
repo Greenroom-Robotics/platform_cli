@@ -113,7 +113,17 @@ class Ros(PlatformCliGroup):
                 if build:
                     call("platform ros build")
                 p1 = call(
-                    f"colcon test --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']} {args_str_test}",
+                    " ".join(
+                        [
+                            "colcon test",
+                            "--merge-install",
+                            f"--install-base /opt/greenroom/{env['PLATFORM_MODULE']}",
+                            "--event-handlers console_direct+",
+                            # "--retest-until-pass 10",
+                            '--pytest-args "--verbose"',
+                            args_str_test,
+                        ]
+                    ),
                     abort=False,
                 )
                 p2 = call(f"colcon test-result --all --verbose {args_str}", abort=False)
