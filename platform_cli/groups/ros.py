@@ -97,8 +97,21 @@ class Ros(PlatformCliGroup):
             default=False,
             help="Should we build before testing?",
         )
+        @click.option(
+            "--retest-until-pass",
+            type=int,
+            default=2,
+            help="Number of times to retest until pass",
+        )
         @click.argument("args", nargs=-1)
-        def test(package: str, results_dir: Path, watch: bool, build: bool, args: List[str]):
+        def test(
+            package: str,
+            results_dir: Path,
+            watch: bool,
+            build: bool,
+            retest_until_pass: int,
+            args: List[str],
+        ):
             """Runs colcon test on all ROS packages"""
 
             env = get_ros_env()
@@ -119,7 +132,7 @@ class Ros(PlatformCliGroup):
                             "--merge-install",
                             f"--install-base /opt/greenroom/{env['PLATFORM_MODULE']}",
                             "--event-handlers console_direct+",
-                            # "--retest-until-pass 10",
+                            f"--retest-until-pass {retest_until_pass}",
                             '--pytest-args "--verbose"',
                             args_str_test,
                         ]
