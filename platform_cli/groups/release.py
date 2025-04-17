@@ -588,7 +588,9 @@ class Release(PlatformCliGroup):
         def deb_prepare(version: str, arch: List[Architecture], package: str, package_dir: str, ros_distro: str):  # type: ignore
             """Prepares the release by building the debian package inside a docker container"""
             docker_platforms = [f"linux/{a.value}" for a in arch]
-            echo(f"Preparing to build .deb for {[a.value for a in arch]}", "blue")
+            echo(
+                f"Preparing to build .deb for {[a.value for a in arch]}", "blue", group_start=True
+            )
 
             if "API_TOKEN_GITHUB" not in os.environ:
                 raise Exception("API_TOKEN_GITHUB must be set")
@@ -634,7 +636,9 @@ class Release(PlatformCliGroup):
             except Exception as e:
                 echo(f"Local registry already running: {e}", "yellow")
 
-            echo("Building docker container with buildx...")
+            echo(group_end=True)
+
+            echo("Building docker container with buildx...", group_start=True)
             try:
                 # Configure docker to use the platform buildx builder
                 # Network host is required for the local registry to work
@@ -671,11 +675,17 @@ class Release(PlatformCliGroup):
                 },
                 output={"type": "registry"},
             )
+            echo(group_end=True)
 
             # Inspect the image to get the manifest
             image_manifests = docker.buildx.imagetools.inspect(docker_image_name)
 
             for architecture in arch:
+                echo(
+                    f"Building .deb for package {package_info.package_name} for {architecture.value}",
+                    "blue",
+                    group_start=True,
+                )
                 try:
                     self._build_deb_in_docker(
                         version=version if version else package_info.package_version,
@@ -691,6 +701,7 @@ class Release(PlatformCliGroup):
                         level=LogLevels.ERROR,
                     )
                     raise e
+                echo(group_end=True)
 
         @release.command(name="deb-publish")
         @click.option(
