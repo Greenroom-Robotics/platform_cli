@@ -70,9 +70,7 @@ class Ros(PlatformCliGroup):
 
                 if not no_base:
                     env = get_ros_env()
-                    args_str += (
-                        f" --merge-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']}"
-                    )
+                    args_str += f" --merge-install --symlink-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']}"
 
                 if debug_symbols:
                     args_str += " --cmake-args -D CMAKE_BUILD_TYPE=RelWithDebInfo"
