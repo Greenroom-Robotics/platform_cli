@@ -252,8 +252,7 @@ class Packaging(PlatformCliGroup):
             bloom_args += " --ignore-shlibs-missing-info"
 
             call(f"bloom-generate {pkg_type} --ros-distro {get_ros_distro()} {bloom_args}")
-
-            jobs = cpu_count() if cpu_count() else 1
+            jobs = cpu_count() or 1
             if os.environ.get("BUILDJET_THROTTLE", None):
                 # the number of RAM to cores on the ARM runners are insufficient, so we can't have a 1:1 job:core ratio
                 echo(
