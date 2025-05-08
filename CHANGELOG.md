@@ -1,3 +1,20 @@
+## [1.7.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.6.0...v1.7.0) (2025-05-08)
+
+
+### Features
+
+* add `branches` option to `platform release create` ([0ec2282](https://github.com/Greenroom-Robotics/platform_cli/commit/0ec2282fdabc07187306d556c91fc75573c94802))
+
+
+### Bug Fixes
+
+* add console output to colcon test ([30fadf3](https://github.com/Greenroom-Robotics/platform_cli/commit/30fadf3100f97a271e0522212195dd239152c6e1))
+* attempt to fix stdout disappearing while building ([4d44d41](https://github.com/Greenroom-Robotics/platform_cli/commit/4d44d417fe5b7363caabe2a98553b20ffc23dc70))
+* correct way to specify cores ([3f201d1](https://github.com/Greenroom-Robotics/platform_cli/commit/3f201d1cd59775f0df1299b6451c61a42b274117))
+* maybe this is it ([f018556](https://github.com/Greenroom-Robotics/platform_cli/commit/f018556b08e5400f8e780cb16e3dd2f44a651d81))
+* retest_until_pass 2 times by default ([67fb50b](https://github.com/Greenroom-Robotics/platform_cli/commit/67fb50b51ec28d77242ffdabcecb145b3330161e))
+* throttle the job number on buildjet arm runners ([112d6f3](https://github.com/Greenroom-Robotics/platform_cli/commit/112d6f368bfca9e635b6a4ab4e4bfe156532eb0a))
+
 ## [1.6.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.5.0...v1.6.0) (2024-12-10)
 
 
