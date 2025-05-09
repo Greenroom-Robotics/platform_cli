@@ -1,4 +1,5 @@
 from typing import Type, TypedDict, cast, Optional, Dict, Union, Callable, List
+import re
 import click
 import os
 import time
@@ -15,10 +16,12 @@ class FileSystemEventHandlerDebounced(FileSystemEventHandler):
         self,
         callback: Callable[[], Union[None, subprocess.Popen]],
         file_types: List[str] = [],
+        ignore_regexes: List[str] = [],  # A set of regex matchers
         debounce_time=2.0,
     ):
         self.callback = callback
         self.file_types = file_types
+        self.ignore_regexes = ignore_regexes
         self.debounce_time = debounce_time
         self.last_event = ""
         self.last_event_time = 0
@@ -59,6 +62,13 @@ class FileSystemEventHandlerDebounced(FileSystemEventHandler):
         # Ignore files that don't match the file types
         if file_type not in self.file_types:
             return
+
+        # Check the ignore matchers
+        for regex in self.ignore_regexes:
+            # Convert the regex string to a regex object and match
+            if re.match(regex, str(event.src_path)):
+                click.echo(click.style(f"Ignoring {event.src_path}", fg="yellow"))
+                return
 
         # Debounce
         if (
@@ -186,6 +196,7 @@ def stdout_call(
 def start_watcher(
     callback,
     file_types: List[str] = [".py", ".cpp", ".c", ".hpp", ".h"],
+    ignore_regexes: List[str] = [".*_params.py"],
     debounce_time: float = 2.0,
 ):
     folders_to_ignore = ["log", "build"]
@@ -200,7 +211,7 @@ def start_watcher(
             fg="blue",
         )
     )
-    handler = FileSystemEventHandlerDebounced(callback, file_types, debounce_time)
+    handler = FileSystemEventHandlerDebounced(callback, file_types, ignore_regexes, debounce_time)
     observer = Observer()
 
     for folder in folders:
