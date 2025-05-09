@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.7.0...v1.7.1) (2025-05-09)
+
+
+### Bug Fixes
+
+* ignore changes to _params.py files ([eec5268](https://github.com/Greenroom-Robotics/platform_cli/commit/eec52688f1e181f8e98bbeba1d88f861d8cdbbc8))
+
 ## [1.7.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.6.0...v1.7.0) (2025-05-08)
 
 
