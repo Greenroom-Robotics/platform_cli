@@ -27,8 +27,8 @@ class ReleaseMode(Enum):
 
 
 class Architecture(str, Enum):
-    AMD64 = "amd64"
-    ARM64 = "arm64"
+    amd64 = "amd64"
+    arm64 = "arm64"
 
 
 @dataclass
@@ -469,7 +469,7 @@ class Release(PlatformCliGroup):
             "--arch",
             type=click.Choice(Architecture),  # type: ignore
             help="The architecture to build for. OS will be linux. eg) amd64, arm64",
-            default=[Architecture.AMD64, Architecture.ARM64],
+            default=[Architecture.amd64, Architecture.arm64],
             multiple=True,
         )
         @click.option(
@@ -564,7 +564,7 @@ class Release(PlatformCliGroup):
             "--arch",
             type=click.Choice(Architecture),  # type: ignore
             help="The architecture to build for. OS will be linux. eg) amd64, arm64",
-            default=[Architecture.AMD64, Architecture.ARM64],
+            default=[Architecture.amd64, Architecture.arm64],
             multiple=True,
         )
         @click.option(
