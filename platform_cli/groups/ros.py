@@ -117,12 +117,14 @@ class Ros(PlatformCliGroup):
 
             # Some args only apply to colcon test
             args_str_test = args_str
+            args_str_build = args_str
             if package:
                 args_str_test += f" --packages-select {package}"
+                args_str_build += f" --package {package}"
 
             def command():
                 if build:
-                    call("platform ros build")
+                    call(" ".join(["platform ros build", args_str_build]))
                 p1 = call(
                     " ".join(
                         [
