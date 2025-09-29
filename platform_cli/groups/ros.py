@@ -83,7 +83,7 @@ class Ros(PlatformCliGroup):
             command()
 
         @ros.command(name="test")
-        @click.option("--package", type=str, default=None, help="The package to test")
+        @click.option("--package", "-p", type=str, multiple=True, help="The package(s) to test")
         @click.option("--results-dir", type=Path, default=None)
         @click.option(
             "--watch", type=bool, is_flag=True, default=False, help="Should we watch for changes?"
@@ -101,30 +101,46 @@ class Ros(PlatformCliGroup):
             default=2,
             help="Number of times to retest until pass",
         )
+        @click.option(
+            "--include-dependents",
+            type=bool,
+            is_flag=True,
+            default=False,
+            help="Also test packages that depend on changed packages (used with --changed)",
+        )
         @click.argument("args", nargs=-1)
         def test(
-            package: str,
+            package: List[str],
             results_dir: Path,
             watch: bool,
             build: bool,
             retest_until_pass: int,
+            include_dependents: bool,
             args: List[str],
         ):
             """Runs colcon test on all ROS packages"""
 
             env = get_ros_env()
             args_str = " ".join(args)
-
-            # Some args only apply to colcon test
             args_str_test = args_str
-            args_str_build = args_str
-            if package:
-                args_str_test += f" --packages-select {package}"
-                args_str_build += f" --package {package}"
+
+            packages_to_test = list(package) if package else []
+            packages_str = " ".join(packages_to_test)
+
+            if packages_to_test:
+                if include_dependents:
+                    args_str_test += f" --packages-up-to {packages_str}"
+                else:
+                    args_str_test += f" --packages-select {packages_str}"
 
             def command():
                 if build:
+                    args_str_build = args_str
+                    if packages_to_test:
+                        for pkg in packages_to_test:
+                            args_str_build += f" --package {pkg}"
                     call(" ".join(["platform ros build", args_str_build]))
+
                 p1 = call(
                     " ".join(
                         [
@@ -148,7 +164,8 @@ class Ros(PlatformCliGroup):
             p1, p2 = command()
 
             if results_dir and results_dir.exists():
-                collect_xunit_xmls(results_dir, package)
+                for pkg in packages_to_test:
+                    collect_xunit_xmls(results_dir, pkg)
 
             exit(max([p1.returncode, p2.returncode]))
 
