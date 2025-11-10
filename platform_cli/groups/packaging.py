@@ -244,14 +244,18 @@ class Packaging(PlatformCliGroup):
                 if pkgs and pkg_name in pkgs:
                     bloom_args += f" --src-dir={pkgs[pkg_name]}"
 
+            deb_build_opts = []
+
             if no_tests:
                 bloom_args += " --no-tests"
+                deb_build_opts.append("nocheck")
 
             # this is the equivalent of turning off type safety for compiled libraries.
             # TODO rework the build process to build deps debs first if required, then install debs then build pkgs
             bloom_args += " --ignore-shlibs-missing-info"
 
             call(f"bloom-generate {pkg_type} --ros-distro {get_ros_distro()} {bloom_args}")
+
             jobs = cpu_count() or 1
             if os.environ.get("BUILDJET_THROTTLE", None):
                 # the number of RAM to cores on the ARM runners are insufficient, so we can't have a 1:1 job:core ratio
@@ -260,7 +264,10 @@ class Packaging(PlatformCliGroup):
                 )
                 jobs = math.floor(jobs * 0.75)
 
-            call(f"DEB_BUILD_OPTIONS=parallel={jobs} fakeroot debian/rules binary")
+            deb_build_opts.append(f"parallel={jobs}")
+            deb_env = {"DEB_BUILD_OPTIONS": " ".join(deb_build_opts)} if deb_build_opts else None
+
+            call("fakeroot debian/rules binary", env=deb_env)
 
             # the .deb and .ddeb files are in the parent directory
             # move .deb/.ddeb files into the output folder
