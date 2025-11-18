@@ -265,7 +265,7 @@ class Packaging(PlatformCliGroup):
                 jobs = math.floor(jobs * 0.75)
 
             deb_build_opts.append(f"parallel={jobs}")
-            deb_env = {"DEB_BUILD_OPTIONS": " ".join(deb_build_opts)} if deb_build_opts else None
+            deb_env = {"DEB_BUILD_OPTIONS": " ".join(deb_build_opts)} if deb_build_opts else {}
 
             call("fakeroot debian/rules binary", env=deb_env)
 
