@@ -664,6 +664,7 @@ class Release(PlatformCliGroup):
                 tags=[docker_image_name],
                 build_args={
                     "API_TOKEN_GITHUB": os.environ["API_TOKEN_GITHUB"],
+                    "GPU": os.environ["GPU"],
                     "PLATFORM_MODULE": package_info.module_info.platform_module_name,
                     "PACKAGE_DIR": package_dir,
                     "ROS_DISTRO": ros_distro,
