@@ -1,3 +1,14 @@
+## [1.7.2](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.7.1...v1.7.2) (2025-11-18)
+
+
+### Bug Fixes
+
+* actually pass on nocheck to debuild ([5da21a6](https://github.com/Greenroom-Robotics/platform_cli/commit/5da21a6595561cec8c743319f2a89bb10600a8d4))
+* add multi-package support ([32358c4](https://github.com/Greenroom-Robotics/platform_cli/commit/32358c4068887a3379ddf5725b5158bd206eed3c))
+* forever the janitor ([6306a4e](https://github.com/Greenroom-Robotics/platform_cli/commit/6306a4ee304207407d1cafed287996c69be96a5b))
+* make enum str/val the same ([0e3c5c5](https://github.com/Greenroom-Robotics/platform_cli/commit/0e3c5c5c5e4d4a2a3124d0eb480328b4a68a0c85))
+* pass GPU env var in as a build arg ([7b7995f](https://github.com/Greenroom-Robotics/platform_cli/commit/7b7995fd197acbdeae888eb7247acb4c994771e7))
+
 ## [1.7.1](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.7.0...v1.7.1) (2025-05-09)
 
 
