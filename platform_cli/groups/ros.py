@@ -23,17 +23,23 @@ def get_ros_poetry_packages(path: Path) -> List[Path]:
     return ros_poetry_packages
 
 
-def collect_xunit_xmls(destination: Path, package: str):  # type: ignore
+def collect_xunit_xmls(destination: Path, packages: List[str]):  # type: ignore
     """Collects all pytest, gtest XML files from the test results"""
 
-    package = "*" if not package else package
+    # If no packages specified, collect from all packages
+    if not packages:
+        package_patterns = ["*"]
+    else:
+        package_patterns = packages
 
-    # pytest puts their results into build/pkg_name/pytest.xml
-    xmls = list((Path.cwd() / "build").glob(f"{package}/pytest.xml"))
-    # pytest based tests put their results into build/pkg_name/test_results/pkg_name/*.xunit.xml
-    xmls += list((Path.cwd() / "build").glob(f"{package}/test_results/{package}/*.xunit.xml"))
-    # gtest based tests put their results into build/pkg_name/test_results/pkg_name/*.gtest.xml
-    xmls += list((Path.cwd() / "build").glob(f"{package}/test_results/{package}/*.gtest.xml"))
+    xmls = []
+    for package in package_patterns:
+        # pytest puts their results into build/pkg_name/pytest.xml
+        xmls += list((Path.cwd() / "build").glob(f"{package}/pytest.xml"))
+        # pytest based tests put their results into build/pkg_name/test_results/pkg_name/*.xunit.xml
+        xmls += list((Path.cwd() / "build").glob(f"{package}/test_results/{package}/*.xunit.xml"))
+        # gtest based tests put their results into build/pkg_name/test_results/pkg_name/*.gtest.xml
+        xmls += list((Path.cwd() / "build").glob(f"{package}/test_results/{package}/*.gtest.xml"))
 
     for f in xmls:
         pkg_name = f.parent.name
@@ -50,14 +56,16 @@ class Ros(PlatformCliGroup):
             pass
 
         @ros.command(name="build")
-        @click.option("--package", type=str, default=None, help="The package to build")
+        @click.option("--package", type=str, multiple=True, help="The packages to build")
         @click.option("--debug-symbols", is_flag=True, show_default=True, default=False)
         @click.option("--no-base", is_flag=True, default=False)
         @click.option(
             "--watch", type=bool, is_flag=True, default=False, help="Should we watch for changes?"
         )
         @click.argument("args", nargs=-1)
-        def build(package: str, debug_symbols: bool, no_base: bool, watch: bool, args: List[str]):
+        def build(
+            package: List[str], debug_symbols: bool, no_base: bool, watch: bool, args: List[str]
+        ):
             """Runs colcon build on all ROS package"""
 
             def command():
@@ -66,7 +74,8 @@ class Ros(PlatformCliGroup):
                 if package:
                     # use --packages-up-to if the dependencies weren't installed
                     # use --packages-select if all the dependencies were rosdepped
-                    args_str += f" --packages-select {package}"
+                    package_list = " ".join(package)
+                    args_str += f" --packages-select {package_list}"
 
                 if not no_base:
                     env = get_ros_env()
@@ -83,7 +92,7 @@ class Ros(PlatformCliGroup):
             command()
 
         @ros.command(name="test")
-        @click.option("--package", type=str, default=None, help="The package to test")
+        @click.option("--package", type=str, multiple=True, help="The packages to test")
         @click.option("--results-dir", type=Path, default=None)
         @click.option(
             "--watch", type=bool, is_flag=True, default=False, help="Should we watch for changes?"
@@ -103,7 +112,7 @@ class Ros(PlatformCliGroup):
         )
         @click.argument("args", nargs=-1)
         def test(
-            package: str,
+            package: List[str],
             results_dir: Path,
             watch: bool,
             build: bool,
@@ -119,8 +128,9 @@ class Ros(PlatformCliGroup):
             args_str_test = args_str
             args_str_build = args_str
             if package:
-                args_str_test += f" --packages-select {package}"
-                args_str_build += f" --package {package}"
+                package_list = " ".join(package)
+                args_str_test += f" --packages-select {package_list}"
+                args_str_build += f" --package {package_list}"
 
             def command():
                 if build:
