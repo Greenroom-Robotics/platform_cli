@@ -70,11 +70,11 @@ class Ros(PlatformCliGroup):
 
             def command():
                 args_str = " ".join(args)
-
-                if package:
+                packages = [p for p in package if p]  # filter out empty strings
+                if packages:
                     # use --packages-up-to if the dependencies weren't installed
                     # use --packages-select if all the dependencies were rosdepped
-                    package_list = " ".join(package)
+                    package_list = " ".join(packages)
                     args_str += f" --packages-select {package_list}"
 
                 if not no_base:
@@ -130,7 +130,8 @@ class Ros(PlatformCliGroup):
             if package:
                 package_list = " ".join(package)
                 args_str_test += f" --packages-select {package_list}"
-                args_str_build += f" --package {package_list}"
+                package_args = " ".join([f"--package {pkg}" for pkg in package])
+                args_str_build += f" {package_args}"
 
             def command():
                 if build:
