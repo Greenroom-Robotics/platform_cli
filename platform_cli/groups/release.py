@@ -112,6 +112,7 @@ def get_releaserc(
     ros_distro: Optional[str] = None,
     skip_build: bool = False,
     branches: Optional[List[str]] = None,
+    secrets: str = "{}",
 ):
     """
     Returns the releaserc with the plugins configured according to the arguments
@@ -125,6 +126,8 @@ def get_releaserc(
         prepare_cmd_args += f" --package={package}"
     if ros_distro:
         prepare_cmd_args += f" --ros-distro={ros_distro}"
+    if secrets != "{}":
+        prepare_cmd_args += f" --secrets='{secrets}'"
 
     releaserc = {
         "branches": branches or ["main", "master", {"name": "alpha", "prerelease": True}],
@@ -495,11 +498,17 @@ class Release(PlatformCliGroup):
             type=str,
             help="The branches to release on. Defaults to: main,master,alpha",
         )
+        @click.option(
+            "--secrets",
+            type=str,
+            help='JSON string of secrets to pass to docker build (e.g. \'{"API_TOKEN_GITHUB": "./.secrets/github_token"}\')',
+            default="{}",
+        )
         @click.argument(
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, skip_tag: bool, skip_build: bool, branches: str, args: List[str]):  # type: ignore
+        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, skip_tag: bool, skip_build: bool, branches: str, secrets: str, args: List[str]):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
             branches_split = branches.split(",") if branches else None
@@ -527,6 +536,7 @@ class Release(PlatformCliGroup):
                     ros_distro,
                     skip_build,
                     branches_split,
+                    secrets,
                 )
                 with open(package_info.package_path / ".releaserc", "w+") as f:
                     f.write(json.dumps(releaserc, indent=4))
@@ -585,7 +595,13 @@ class Release(PlatformCliGroup):
             help="The ROS2 distro to build for. eg) foxy, galactic",
             default="iron",
         )
-        def deb_prepare(version: str, arch: List[Architecture], package: str, package_dir: str, ros_distro: str):  # type: ignore
+        @click.option(
+            "--secrets",
+            type=str,
+            help='JSON string of secrets to pass to docker build (e.g. \'{"API_TOKEN_GITHUB": "./.secrets/github_token"}\')',
+            default="{}",
+        )
+        def deb_prepare(version: str, arch: List[Architecture], package: str, package_dir: str, ros_distro: str, secrets: str):  # type: ignore
             """Prepares the release by building the debian package inside a docker container"""
             docker_platforms = [f"linux/{a.value}" for a in arch]
             echo(
@@ -657,11 +673,22 @@ class Release(PlatformCliGroup):
 
             docker.buildx.use("platform")
 
+            # Parse secrets JSON and prepare buildx secrets
+            buildx_secrets = []
+            try:
+                secrets_dict = json.loads(secrets)
+                for secret_id, secret_path in secrets_dict.items():
+                    buildx_secrets.append(f"id={secret_id},src={secret_path}")
+            except json.JSONDecodeError:
+                if secrets != "{}":
+                    echo(f"Warning: Invalid secrets JSON format: {secrets}", "yellow")
+
             # Build the images for arm and amd using buildx
             docker.buildx.build(
                 package_info.module_info.platform_module_path,
                 platforms=docker_platforms,
                 tags=[docker_image_name],
+                secrets=buildx_secrets,
                 build_args={
                     "API_TOKEN_GITHUB": os.environ["API_TOKEN_GITHUB"],
                     "GPU": os.environ["GPU"],
