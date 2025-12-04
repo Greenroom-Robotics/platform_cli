@@ -257,12 +257,6 @@ class Packaging(PlatformCliGroup):
             call(f"bloom-generate {pkg_type} --ros-distro {get_ros_distro()} {bloom_args}")
 
             jobs = cpu_count() or 1
-            if os.environ.get("BUILDJET_THROTTLE", None):
-                # the number of RAM to cores on the ARM runners are insufficient, so we can't have a 1:1 job:core ratio
-                echo(
-                    "Throttling number of jobs due to Buildjet ARM64 Runner limitations", "yellow"
-                )
-                jobs = math.floor(jobs * 0.75)
 
             deb_build_opts.append(f"parallel={jobs}")
             deb_env = {"DEB_BUILD_OPTIONS": " ".join(deb_build_opts)} if deb_build_opts else {}
