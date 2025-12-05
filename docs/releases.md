@@ -56,8 +56,27 @@ If you try and release a package that has already been released (and does not ha
 
 Releases are done using [semantic-release](https://github.com/semantic-release/semantic-release). There are 2 tricky things here...
 1. We want to build and version each package separately which is why we use [multi-semantic-release](https://github.com/qiwi/multi-semantic-release).
-2. We want to build `.deb`s for both **AMD64** and **ARM64** and possibly multiple versions of ROS which is why we use docker to build the `.deb` files. We then need to mount these back to the host machine so they can be linked into a single release.
+2. We want to build `.deb`s for **AMD64** and/or **ARM64** architectures and possibly multiple versions of ROS, with automatic optimization for native builds. We use docker to build the `.deb` files and mount them back to the host machine so they can be linked into a single release.
 
+#### Architecture Build Strategies:
+
+The build process automatically optimizes based on target architectures:
+
+**Native Architecture Builds:**
+- Target architecture matches the current system (e.g., amd64 → amd64)
+- Skips QEMU emulation setup for better performance
+- Skips local registry setup
+- Uses buildx with local loading
+- Faster build times and simpler setup
+
+**Cross-Platform Builds:**
+- Multiple architectures OR non-native single architecture
+- Sets up QEMU for emulation
+- Creates local docker registry for multi-platform images
+- Uses buildx with registry output
+- Supports building arm64 on amd64 machines and vice versa
+
+> **Performance Note**: When building for only the current system architecture, the build process automatically optimizes by skipping cross-platform emulation setup, resulting in faster build times.
 
 #### Setup:
 `platform release setup` is run from the root of a platform module repo. This will:
@@ -78,9 +97,13 @@ Releases are done using [semantic-release](https://github.com/semantic-release/s
    2. Generating releases notes for each package based on the commits
    3. Generating a changelog for each package based in the commits
    4. Running [`platform release deb-prepare`](../platform_cli/groups/release.py#:~:text=deb_prepare) which builds the `.deb` in a docker container.
-      1. Sets up `tonistiigi/binfmt` which allows docker to run `arm64` containers on `amd64` machines
-      2. Create a local docker registry on [localhost:5000](http://localhost:5000) to store the built images
-      3. Uses `buildx` to build for both `amd64` and `arm64` and push to the local registry
+      1. **Architecture Detection**: Determines if cross-platform emulation is needed
+      2. **Conditional Setup**:
+         - For cross-platform builds: Sets up QEMU (`tonistiigi/binfmt`) and local registry on [localhost:5000](http://localhost:5000)
+         - For native builds: Skips QEMU and registry for better performance
+      3. **Buildx Build**: Uses `buildx` for all builds (enables secrets support)
+         - Cross-platform: Builds for multiple architectures and pushes to local registry
+         - Native: Builds for current architecture only and loads locally
       4. Executes [`platform pkg build`](../platform_cli/groups/packaging.py#:~:text=build) inside each docker container to build the `.deb` with a docker volume to mount the resultant `.deb` back to the host machine.
    5. Running [`platform release deb-publish`](../platform_cli/groups/release.py#:~:text=deb_publish) to publish the `.deb` to the apt repo
    6. Uploading the `.deb` to the github release
