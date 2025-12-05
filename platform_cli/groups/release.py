@@ -440,22 +440,22 @@ class Release(PlatformCliGroup):
             echo(f"Local registry already running: {e}", "yellow")
 
     def _setup_buildx_environment(self):
-        """Configure docker to use the platform buildx builder"""
+        """Configure buildx environment"""
+        # Custom builder needed for local registry access (cross-platform builds)
         try:
-            # Network host is required for the local registry to work
             docker.buildx.create(
                 name="platform",
                 driver="docker-container",
                 use=True,
                 driver_options={"network": "host"},
             )
+            echo("Created custom buildx builder for registry access", "blue")
         except Exception:
-            echo("docker buildx environment already exists", "yellow")
+            echo("Custom buildx builder already exists", "yellow")
             echo(
                 "Consider running `docker buildx rm platform` if you want to reset the build environment",
                 "yellow",
             )
-
         docker.buildx.use("platform")
 
     def _parse_secrets_for_buildx(self, secrets: str) -> List[str]:
@@ -812,11 +812,10 @@ class Release(PlatformCliGroup):
             if needs_qemu:
                 self._setup_qemu()
                 self._setup_local_registry()
+                self._setup_buildx_environment()
 
             echo(group_end=True)
 
-            # Always use buildx (for secrets support), but configure differently
-            self._setup_buildx_environment()
             buildx_secrets = self._parse_secrets_for_buildx(secrets)
 
             # Build docker image with appropriate strategy
