@@ -14,7 +14,7 @@ from python_on_whales import docker
 from python_on_whales.components.buildx.imagetools.models import Manifest
 
 from platform_cli.groups.base import PlatformCliGroup
-from platform_cli.helpers import echo, call, LogLevels
+from platform_cli.helpers import echo, call, LogLevels, is_ci_environment
 
 from platform_cli.groups.packaging import apt_clone, apt_push, apt_add
 
@@ -684,11 +684,31 @@ class Release(PlatformCliGroup):
             help='JSON string of secrets to pass to docker build (e.g. \'{"API_TOKEN_GITHUB": "./.secrets/github_token"}\')',
             default="{}",
         )
+        @click.option(
+            "--on-no-release",
+            type=click.Choice(["ignore", "warn", "error"]),
+            help="What to do when no release is created (ignore, warn, or error)",
+            default="ignore",
+        )
         @click.argument(
             "args",
             nargs=-1,
         )
-        def create(changelog: bool, github_release: bool, public: bool, package: str, package_dir: str, arch: List[Architecture], ros_distro: str, skip_tag: bool, skip_build: bool, branches: str, secrets: str, args: List[str]):  # type: ignore
+        def create(
+            changelog: bool,
+            github_release: bool,
+            public: bool,
+            package: str,
+            package_dir: str,
+            arch: list[Architecture],
+            ros_distro: str,
+            skip_tag: bool,
+            skip_build: bool,
+            branches: str,
+            secrets: str,
+            on_no_release: str,
+            args: list[str],
+        ):  # type: ignore
             """Creates a release of the platform module package. See .releaserc for more info"""
             args_str = " ".join(args)
             branches_split = branches.split(",") if branches else None
@@ -742,6 +762,38 @@ class Release(PlatformCliGroup):
                 )
                 call(f"yarn multi-semantic-release {args_str}")
 
+            debs_created = False
+            for package_name, package_info in packages.items():
+                debs_dir = package_info.package_path / "debs"
+                if debs_dir.exists():
+                    deb_files = list(debs_dir.glob("*.deb")) + list(debs_dir.glob("*.ddeb"))
+                    if deb_files:
+                        debs_created = True
+                        break
+
+            # write gh action output
+            if is_ci_environment():
+                github_output = os.getenv("GITHUB_OUTPUT")
+                if github_output:
+                    with open(github_output, "a") as f:
+                        _ = f.write(f"new_release_published={'true' if debs_created else 'false'}\n")
+
+            if not debs_created:
+                if on_no_release == "warn":
+                    echo(
+                        "::warning::No release was created - no debs found",
+                        "yellow",
+                        level=LogLevels.WARNING,
+                    )
+
+                if on_no_release == "error":
+                    echo(
+                        "::error::No release was created - no debs found",
+                        "red",
+                        level=LogLevels.ERROR,
+                    )
+                    raise click.ClickException("No release was created")
+
         @release.command(name="deb-prepare")
         @click.option(
             "--version",
@@ -781,7 +833,14 @@ class Release(PlatformCliGroup):
             help='JSON string of secrets to pass to docker build (e.g. \'{"API_TOKEN_GITHUB": "./.secrets/github_token"}\')',
             default="{}",
         )
-        def deb_prepare(version: str, arch: List[Architecture], package: str, package_dir: str, ros_distro: str, secrets: str):  # type: ignore
+        def deb_prepare(
+            version: str,
+            arch: List[Architecture],
+            package: str,
+            package_dir: str,
+            ros_distro: str,
+            secrets: str,
+        ):  # type: ignore
             """Prepares the release by building the debian package inside a docker container"""
             docker_platforms = [f"linux/{a.value}" for a in arch]
             echo(
