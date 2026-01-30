@@ -2,23 +2,17 @@
 
 ## How to create a release
 
-### Release from a platform module repo in CI
+### From CI (recommended)
 
-Simply run the `release` workflow from any *platform_module* repo.
+Run the `release.yml` workflow from any *platform_module* repo.
 
-### Release locally
+### Locally
 
-If the workflow is running too slow you may want to build the release locally.
+:::danger
+You probably shouldn't do this...
+:::
 
-Make sure you export the following environment variables:
-
-```bash
-export GITHUB_TOKEN=<github token>
-export API_TOKEN_GITHUB=<github token>
-export CI=true # So semantic-release actually runs
-```
-
-From a *platform_module* repo run:
+From a *platform_module* repo, set the required environment variables (see [README](../README.md#environment-variables)) and run:
 
 ```bash
 platform release setup
@@ -27,84 +21,106 @@ platform release create
 
 ## Project structure
 
-There are 2 different types of project structure we can release. We determine these automatically based on if there is a `package.xml` in the root of the repo or not.
+The release mode is determined automatically based on whether `package.xml` exists in the repo root.
 
-### 1. Single package
+### Single package
 
-This is the simplest structure. It is a single package with a `package.xml` and a `CMakeLists.txt` (if cpp) in the root of the repo. `semantic-release` will be run on the root of the repo.
+A single package with `package.xml` (and `CMakeLists.txt` if C++) in the repo root. Uses `semantic-release` directly.
 
-### 2. Multi package
+### Multi package
 
-This is a more complex structure. It is a single repo with multiple packages. Each package has a `package.xml` and a `CMakeLists.txt` (if cpp) in the root of the package. `multi-semantic-release` will be run on the root of the repo.
+Multiple packages, each with their own `package.xml`. Uses `multi-semantic-release` to version each package independently.
+
+## How it works
+
+### Overview
+
+```mermaid
+flowchart LR
+    A[platform release setup] --> B[platform release create]
+    B --> C[semantic-release]
+    C --> D[deb-prepare]
+    D --> E[deb-publish]
+    E --> F[GitHub Release]
+```
+
+### Setup phase
+
+`platform release setup` prepares the repo for semantic-release:
+
+```mermaid
+flowchart TD
+    A[Start] --> B[Copy package.json, yarn.lock, .releaserc]
+    B --> C[yarn install]
+    C --> D[Find all package.xml files]
+    D --> E[Generate package.json next to each]
+    E --> F[Create Dockerfile if missing]
+```
+
+**Note:** The generated `package.json`, `yarn.lock`, and `.releaserc` files should NOT be committed.
+
+### Create phase
+
+`platform release create` triggers the release pipeline:
+
+```mermaid
+flowchart TD
+    A[multi-semantic-release] --> B[Analyze commits]
+    B --> C{New version?}
+    C -->|No| D[Skip]
+    C -->|Yes| E[Generate changelog]
+    E --> F[deb-prepare]
+    F --> G[deb-publish]
+    G --> H[Upload to GitHub Release]
+    H --> I[Commit CHANGELOG.md]
+```
+
+### Debian build process
+
+`platform release deb-prepare` builds `.deb` packages in Docker:
+
+```mermaid
+flowchart TD
+    A[Start] --> B{Cross-platform?}
+    B -->|Yes| C[Setup QEMU + local registry]
+    B -->|No| D[Skip emulation setup]
+    C --> E[buildx build → registry]
+    D --> F[buildx build → local]
+    E --> G[Build .deb for each arch]
+    F --> G
+    G --> H[Mount debs back to host]
+```
+
+**Native builds** (target matches host architecture):
+- Skips QEMU emulation and local registry
+- Uses buildx with local loading
+- Faster build times
+
+**Cross-platform builds** (multiple or non-native architectures):
+- Sets up QEMU for emulation
+- Creates local registry on localhost:5000
+- Uses buildx with registry output
 
 ## FAQs
 
-### 1. How are versions determined?
+### How are versions determined?
 
-Versions are determined by the commit messages on each package. We use [conventionalcommits](https://www.conventionalcommits.org/en/v1.0.0/) to determine the next version. This is done using [semantic-release/commit-analyzer](https://github.com/semantic-release/commit-analyzer)
+Versions are determined by commit messages using [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/):
 
-Essentially:
-* `fix:` commits will bump the patch version
-* `feat:` commits will bump the minor version
-* `BREAKING CHANGE:` commits will bump the major version
+| Commit prefix | Version bump |
+|---------------|--------------|
+| `fix:` | Patch (1.0.0 → 1.0.1) |
+| `feat:` | Minor (1.0.0 → 1.1.0) |
+| `BREAKING CHANGE:` | Major (1.0.0 → 2.0.0) |
 
-### 2. How can I re-release a package?
+### How can I re-release a package?
 
-If you try and release a package that has already been released (and does not have any new `fix:`, `feat:` or `BREAKING CHANGE:` commits) then semantic release will NOT release it. If you want to release it anyway, you'll need to open up the `tags` on github and delete the tag for the package. Then you can re-run the release workflow.
+If a package has no new commits, semantic-release will skip it. To force a re-release:
 
-### 3. How releases work
+1. Go to the repo's tags on GitHub
+2. Delete the tag for the package
+3. Re-run the release workflow
 
-Releases are done using [semantic-release](https://github.com/semantic-release/semantic-release). There are 2 tricky things here...
-1. We want to build and version each package separately which is why we use [multi-semantic-release](https://github.com/qiwi/multi-semantic-release).
-2. We want to build `.deb`s for **AMD64** and/or **ARM64** architectures and possibly multiple versions of ROS, with automatic optimization for native builds. We use docker to build the `.deb` files and mount them back to the host machine so they can be linked into a single release.
+### Why does semantic-release not publish?
 
-#### Architecture Build Strategies:
-
-The build process automatically optimizes based on target architectures:
-
-**Native Architecture Builds:**
-- Target architecture matches the current system (e.g., amd64 → amd64)
-- Skips QEMU emulation setup for better performance
-- Skips local registry setup
-- Uses buildx with local loading
-- Faster build times and simpler setup
-
-**Cross-Platform Builds:**
-- Multiple architectures OR non-native single architecture
-- Sets up QEMU for emulation
-- Creates local docker registry for multi-platform images
-- Uses buildx with registry output
-- Supports building arm64 on amd64 machines and vice versa
-
-> **Performance Note**: When building for only the current system architecture, the build process automatically optimizes by skipping cross-platform emulation setup, resulting in faster build times.
-
-#### Setup:
-`platform release setup` is run from the root of a platform module repo. This will:
-
-1. Copy a `package.json`, `yarn.lock` and `.releaserc` into the root of the project.
-2. `yarn install` all the nodejs deps (you need to have nodejs installed!)
-3. Find all the `package.xml` files in the repo and generate a `packages.json` file next to it (this is because `semantic-release` doesn't support `package.xml` files)
-4. The .`releaserc` config will be used for all of the packages (even though it is used in the root of the project)
-5. We **DO NOT** want to commit back the `package.json`, `yarn.lock` or `.releaserc`.
-
-#### Creating the release:
-`platform release create` is run from the root of a platform module repo. This will:
-
-1. Run `yarn multi-semantic-release` which triggers [multi-semantic-release](https://github.com/qiwi/multi-semantic-release) to run `semantic-release` on each package in the repo. It determines packages by looking for `package.json` files in the repo.
-2. From the root of each package it will follow the instructions in [releaserc](../platform_cli/groups/release.py#:~:text=releaserc) to build the release (see below
-3. This includes:
-   1. Analysing the commits using `conventionalcommits` to figure out what the next version should be
-   2. Generating releases notes for each package based on the commits
-   3. Generating a changelog for each package based in the commits
-   4. Running [`platform release deb-prepare`](../platform_cli/groups/release.py#:~:text=deb_prepare) which builds the `.deb` in a docker container.
-      1. **Architecture Detection**: Determines if cross-platform emulation is needed
-      2. **Conditional Setup**:
-         - For cross-platform builds: Sets up QEMU (`tonistiigi/binfmt`) and local registry on [localhost:5000](http://localhost:5000)
-         - For native builds: Skips QEMU and registry for better performance
-      3. **Buildx Build**: Uses `buildx` for all builds (enables secrets support)
-         - Cross-platform: Builds for multiple architectures and pushes to local registry
-         - Native: Builds for current architecture only and loads locally
-      4. Executes [`platform pkg build`](../platform_cli/groups/packaging.py#:~:text=build) inside each docker container to build the `.deb` with a docker volume to mount the resultant `.deb` back to the host machine.
-   5. Running [`platform release deb-publish`](../platform_cli/groups/release.py#:~:text=deb_publish) to publish the `.deb` to the apt repo
-   6. Uploading the `.deb` to the github release
-   7. Commiting back the changes to the `CHANGELOG.md` files
+Ensure `CI=true` is set. Without it, semantic-release performs a dry-run.

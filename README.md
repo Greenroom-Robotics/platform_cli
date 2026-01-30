@@ -2,76 +2,106 @@
 
 ![Platform_CLI](docs/assets/platform_cli.png)
 
-A CLI for common commands shared between Greenroom Platform Modules and Platform CI
+A CLI for common commands shared between Greenroom Platform Modules and Platform CI.
 
-## Development
-
-* `pip install -e .` to install in edit mode
-* `platform` to test it
-
-## Usage
-
-* `pip install git+https://github.com/Greenroom-Robotics/platform_cli.git@main` to install from a tag/branch
-* `platform` to use.
-
-### Requirements
-
-Please export the following environment variables:
-* `PLATFORM_MODULE` eg) `platform_perception`
-* `ROS_OVERLAY` eg) `/opt/ros/galactic`
-
-### Commands
-
-#### `platform ros`
-```
-build                Runs colcon build on all ROS package
-install_poetry_deps  Installs the poetry deps for any python packages
-test                 Runs colcon test on all ROS packages
-```
-
-#### `platform poetry`
-```
-install  Runs poetry install on all poetry packages
-test     Runs pytest on all poetry packages
-```
-
-#### `platform py`
-```
-test  Runs pytest on the selected package/path
-```
-
-#### `platform pkg`
+## Quick Start
 
 ```bash
-apt-add       Adds a .deb to the GR apt repo
-apt-clone     Checks out the GR apt repo
-apt-push      Pushes to the GR apt repo
-apt-update    Update the GR apt repo
-build         Builds the package using bloom
-clean         Removes debians and log directories
-get-sources   Imports items from the .repo file
-install-deps  Installs rosdeps
-refresh-deps  Installs rosdeps
-setup         Sets up the greenroom apt and rosdep lists
+# Install from GitHub
+pip install git+https://github.com/Greenroom-Robotics/platform_cli.git@main
+
+# Or install locally for development
+pip install -e .
+
+# View available commands
+platform --help
 ```
 
-#### `platform release`
+## Environment Variables
+
+### Required
+
+| Variable          | Used By      | Description                                        |
+| ----------------- | ------------ | -------------------------------------------------- |
+| `PLATFORM_MODULE` | `ros`, `pkg` | Platform module name (e.g., `platform_perception`) |
+| `ROS_OVERLAY`     | `ros`, `pkg` | ROS installation path (e.g., `/opt/ros/iron`)      |
+
+### Optional / Conditional
+
+| Variable           | Used By                | Default | Description                                                                               |
+| ------------------ | ---------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `API_TOKEN_GITHUB` | `pkg setup`, `release` | -       | GitHub PAT with `repo` and `package:read` scope. Required for package setup and releases. |
+| `GITHUB_TOKEN`     | `release create`       | -       | Token for semantic-release. Required when running releases.                               |
+| `GPU`              | `release deb-prepare`  | -       | GPU build configuration passed to Docker build.                                           |
+| `ROS_DISTRO`       | `release`, `pkg`       | `iron`  | ROS distribution to build for.                                                            |
+| `CI`               | `release`              | -       | Set to `true` in CI environments for semantic-release.                                    |
+
+## Command Groups
+
+| Group     | Purpose                                    | Example                               |
+| --------- | ------------------------------------------ | ------------------------------------- |
+| `ros`     | Build, test, and launch ROS packages       | `platform ros build --package my_pkg` |
+| `pkg`     | Debian packaging and dependency management | `platform pkg setup`                  |
+| `release` | Create releases with semantic versioning   | `platform release create`             |
+| `poetry`  | Manage pure Python (non-ROS) packages      | `platform poetry install`             |
+| `py`      | Run pytest on Python packages              | `platform py test`                    |
+| `ws`      | Manage colcon workspaces in containers     | `platform ws container`               |
+
+Run `platform <group> --help` for detailed command information.
+
+## Common Workflows
+
+### Build and test ROS packages
 
 ```bash
-create       Creates a release of the platform module package.
-deb-prepare  Prepares the release by building the debian package inside a docker container
-deb-publish  Publishes the deb to the apt repo
-setup        Copies the package.json and yarn.lock into the root of the project and installs the deps
+platform ros build --package my_package
+platform ros test --package my_package
 ```
 
-See [releases](./docs/releases.md) for more into on how `platform release create` works.
-
-### double-dash support
-
-Many commands support `--` in order to pipe args to the internal tools. For example,
+### Create a release
 
 ```bash
-platform ros build -- --help # will list colcon --help rather than the plaform cli's
-# or
-platform ros build -- --packages-select some_package # to pass directly to colcon
+platform release setup
+platform release create
+```
+
+See [docs/releases.md](./docs/releases.md) for detailed release documentation.
+
+### Set up development environment
+
+```bash
+platform pkg setup          # Configure apt and rosdep
+platform pkg install-deps   # Install ROS dependencies
+```
+
+## Double-Dash Passthrough
+
+Many commands support `--` to pass arguments directly to underlying tools:
+
+```bash
+platform ros build -- --packages-select some_package  # Pass to colcon
+platform ros build -- --help                          # Show colcon help
+platform py test -- -k test_name                      # Pass to pytest
+```
+
+## Extending the CLI
+
+Create custom command groups by subclassing `PlatformCliGroup`:
+
+```python
+from platform_cli.groups.base import PlatformCliGroup
+from platform_cli.cli import init_platform_cli
+import click
+
+class MyCommands(PlatformCliGroup):
+    def create(self, cli: click.Group):
+        @cli.group(help="My custom commands")
+        def custom():
+            pass
+
+        @custom.command(name="hello")
+        def hello():
+            click.echo("Hello!")
+
+init_platform_cli(extra_groups=[MyCommands()])
 ```
