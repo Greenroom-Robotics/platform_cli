@@ -81,8 +81,10 @@ class Ros(PlatformCliGroup):
                     env = get_ros_env()
                     args_str += f" --merge-install --symlink-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']}"
 
+                args_str += " --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+
                 if debug_symbols:
-                    args_str += " --cmake-args -D CMAKE_BUILD_TYPE=RelWithDebInfo"
+                    args_str += " -D CMAKE_BUILD_TYPE=RelWithDebInfo"
 
                 return call(f"colcon build {args_str}")
 
