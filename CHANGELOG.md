@@ -1,3 +1,16 @@
+## [1.8.0](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.7.2...v1.8.0) (2026-03-04)
+
+
+### Features
+
+* add --secrets to `platform release create` ([33ff38f](https://github.com/Greenroom-Robotics/platform_cli/commit/33ff38f2940cf115e520adf376c928341156c4c1))
+* export compile commands on build ([#15](https://github.com/Greenroom-Robotics/platform_cli/issues/15)) ([f652010](https://github.com/Greenroom-Robotics/platform_cli/commit/f6520105b5dfbb882f11a87ce3af754a38d2dd8d))
+
+
+### Bug Fixes
+
+* filter empty package strings ([657033a](https://github.com/Greenroom-Robotics/platform_cli/commit/657033aab8cb12575dfebf5d0489c4253bb613ab))
+
 ## [1.7.2](https://github.com/Greenroom-Robotics/platform_cli/compare/v1.7.1...v1.7.2) (2025-11-18)
 
 
