@@ -658,8 +658,8 @@ class Release(PlatformCliGroup):
         @click.option(
             "--ros-distro",
             type=str,
-            help="The ROS2 distro to build for. eg) foxy, galactic",
-            default="iron",
+            help="The ROS2 distro to build for. eg) kilted",
+            default="kilted",
         )
         @click.option(
             "--skip-tag",
@@ -772,8 +772,8 @@ class Release(PlatformCliGroup):
         @click.option(
             "--ros-distro",
             type=str,
-            help="The ROS2 distro to build for. eg) foxy, galactic",
-            default="iron",
+            help="The ROS2 distro to build for. eg) kilted",
+            default="kilted",
         )
         @click.option(
             "--secrets",
