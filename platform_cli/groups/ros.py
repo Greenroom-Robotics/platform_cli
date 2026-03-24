@@ -59,12 +59,18 @@ class Ros(PlatformCliGroup):
         @click.option("--package", type=str, multiple=True, help="The packages to build")
         @click.option("--debug-symbols", is_flag=True, show_default=True, default=False)
         @click.option("--no-base", is_flag=True, default=False)
+        @click.option("--deps", is_flag=True, default=False)
         @click.option(
             "--watch", type=bool, is_flag=True, default=False, help="Should we watch for changes?"
         )
         @click.argument("args", nargs=-1)
         def build(
-            package: List[str], debug_symbols: bool, no_base: bool, watch: bool, args: List[str]
+            package: List[str],
+            debug_symbols: bool,
+            no_base: bool,
+            deps: bool,
+            watch: bool,
+            args: List[str],
         ):
             """Runs colcon build on all ROS package"""
 
@@ -75,7 +81,10 @@ class Ros(PlatformCliGroup):
                     # use --packages-up-to if the dependencies weren't installed
                     # use --packages-select if all the dependencies were rosdepped
                     package_list = " ".join(packages)
-                    args_str += f" --packages-select {package_list}"
+                    if deps:
+                        args_str += f" --packages-up-to {package_list}"
+                    else:
+                        args_str += f" --packages-select {package_list}"
 
                 if not no_base:
                     env = get_ros_env()
