@@ -61,6 +61,13 @@ class Ros(PlatformCliGroup):
         @click.option("--no-base", is_flag=True, default=False)
         @click.option("--deps", is_flag=True, default=False)
         @click.option(
+            "-c",
+            "--cmake-arg",
+            type=str,
+            multiple=True,
+            help="Additional CMake args (e.g. -DFOO=bar)",
+        )
+        @click.option(
             "--watch", type=bool, is_flag=True, default=False, help="Should we watch for changes?"
         )
         @click.argument("args", nargs=-1)
@@ -69,6 +76,7 @@ class Ros(PlatformCliGroup):
             debug_symbols: bool,
             no_base: bool,
             deps: bool,
+            cmake_arg: List[str],
             watch: bool,
             args: List[str],
         ):
@@ -91,6 +99,9 @@ class Ros(PlatformCliGroup):
                     args_str += f" --merge-install --symlink-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']}"
 
                 args_str += " --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+
+                for arg in cmake_arg:
+                    args_str += f" {arg}"
 
                 if debug_symbols:
                     args_str += " -D CMAKE_BUILD_TYPE=RelWithDebInfo"
