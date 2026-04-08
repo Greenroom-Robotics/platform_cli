@@ -61,7 +61,11 @@ class Ros(PlatformCliGroup):
         @click.option("--no-base", is_flag=True, default=False)
         @click.option("--deps", is_flag=True, default=False)
         @click.option(
-            "-c", "--cmake-arg", type=str, multiple=True, help="Additional CMake args (e.g. -DFOO=bar)"
+            "-c",
+            "--cmake-arg",
+            type=str,
+            multiple=True,
+            help="Additional CMake args (e.g. -DFOO=bar)",
         )
         @click.option(
             "--watch", type=bool, is_flag=True, default=False, help="Should we watch for changes?"
