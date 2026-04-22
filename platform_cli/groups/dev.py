@@ -20,6 +20,7 @@ PRODUCTS: Dict[str, Any] = {
         "cli_package": "lookout-cli",
         "compose_dir": "tools/lookout_cli/lookout_cli/docker",
         "marker_path": "tools/lookout_cli",
+        "default_service": "lookout_core",
         "services": {
             "lookout_core": {
                 "ros_overlay": "/opt/greenroom/lookout_core",
@@ -35,8 +36,11 @@ PRODUCTS: Dict[str, Any] = {
     },
     "gama": {
         "cli_package": "gama-cli",
-        "compose_dir": "libs/gama_cli/gama_cli/docker/vessel",
+        # The gama vessel CLI looks for the overlay at <gama_cli>/docker/docker-compose.local-dev.yaml
+        # (one level above the per-variant `vessel/` dir), so we write it there.
+        "compose_dir": "libs/gama_cli/gama_cli/docker",
         "marker_path": "libs/gama_cli",
+        "default_service": "gama_vessel",
         "services": {
             "gama_vessel": {
                 "ros_overlay": "/opt/greenroom/gama_vessel",
@@ -49,6 +53,7 @@ PRODUCTS: Dict[str, Any] = {
         "cli_package": "missim-cli",
         "compose_dir": "tools/missim_cli/missim_cli/docker",
         "marker_path": "tools/missim_cli",
+        "default_service": "missim_core",
         "services": {
             "missim_core": {
                 "ros_overlay": "/opt/greenroom/missim_core",
@@ -61,12 +66,26 @@ PRODUCTS: Dict[str, Any] = {
 }
 
 PRODUCT_NAMES = list(PRODUCTS.keys())
+PRODUCT_ALIASES = {"l": "lookout", "g": "gama", "m": "missim"}
+
+
+class ProductType(click.ParamType):
+    name = "product"
+
+    def convert(self, value, param, ctx):
+        resolved = PRODUCT_ALIASES.get(value, value)
+        if resolved not in PRODUCTS:
+            valid = ", ".join(f"{n} ({a})" for a, n in PRODUCT_ALIASES.items())
+            self.fail(f"'{value}' is not a valid product. Valid: {valid}", param, ctx)
+        return resolved
+
 
 OVERLAY_FILENAME = "docker-compose.local-dev.yaml"
 CONTAINER_MOUNT_BASE = "/home/ros/local_dev"
 CONTAINER_BUILD_BASE = "/home/ros/.local-dev/build"
 CONTAINER_TOKEN_PATH = "/home/ros/.local-dev/api-token-github"
 SECRETS_TOKEN_RELATIVE = ".secrets/API_TOKEN_GITHUB"
+CONTAINER_PLATFORM_CLI_SRC = "/home/ros/.local-dev/platform_cli_src"
 
 SKIP_DIRS = {
     "node_modules",
@@ -250,12 +269,39 @@ def _parse_mounts_env(raw: str) -> List[Tuple[str, List[str]]]:
 
 
 def _build_service_command(service_config: dict) -> str:
-    """Compose command: invoke `platform dev _run` then exec the original service command."""
+    """Compose command: bootstrap host platform_cli, then `platform dev _run`.
+
+    `$$` escapes docker-compose's variable interpolation so the literal `$VAR`
+    reaches the container shell (which expands it against the container env).
+
+    The `pip install` step ensures the container picks up the host's current
+    platform_cli (bind-mounted at CONTAINER_PLATFORM_CLI_SRC) — otherwise a
+    pre-built image may lack newer subcommands like `platform dev _run`.
+    """
     if service_config.get("command_env"):
-        inner = f'bash -c "${service_config["command_env"]}"'
+        inner = f'bash -c "$${service_config["command_env"]}"'
     else:
         inner = service_config["default_command"]
-    return f"bash -l -c 'platform dev _run -- {inner}'"
+    bootstrap = (
+        f"[ -d {CONTAINER_PLATFORM_CLI_SRC} ] && "
+        f"pip install --user --quiet --no-deps --force-reinstall "
+        f"{CONTAINER_PLATFORM_CLI_SRC} >/dev/null 2>&1 ||:"
+    )
+    return f"bash -l -c '{bootstrap} ; platform dev _run -- {inner}'"
+
+
+def _find_host_platform_cli_repo() -> Optional[Path]:
+    """Locate the host platform_cli repo (the dir containing setup.cfg).
+
+    Used to bind-mount the host's current platform_cli source into the
+    container so `platform dev _run` (and any in-flight dev.py changes) are
+    available even in pre-built images.
+    """
+    # This file lives at <repo>/platform_cli/groups/dev.py. Walk up 2 levels.
+    here = Path(__file__).resolve().parents[2]
+    if (here / "setup.cfg").exists() and (here / "platform_cli").is_dir():
+        return here
+    return None
 
 
 def _service_mounts(service_data: dict) -> List[Tuple[str, List[str]]]:
@@ -281,6 +327,16 @@ def add_mount_to_overlay(
     services = overlay.setdefault("services", {})
     svc = services.setdefault(service_name, {})
 
+    # Preserve existing host:container mappings so a new mount doesn't clobber old ones.
+    existing_host_by_cp: Dict[str, str] = {}
+    for vol in svc.get("volumes", []) or []:
+        if not isinstance(vol, str) or ":" not in vol:
+            continue
+        h, c = vol.split(":", 1)
+        c = c.rsplit(":", 1)[0] if c.endswith(":ro") or c.endswith(":rw") else c
+        if c.startswith(CONTAINER_MOUNT_BASE + "/"):
+            existing_host_by_cp[c] = h
+
     mounts = _service_mounts(svc)
     for i, (cp, _) in enumerate(mounts):
         if cp == container_path:
@@ -289,9 +345,13 @@ def add_mount_to_overlay(
     else:
         mounts.append((container_path, list(packages)))
 
-    volumes = [f"{host_path}:{cp}" for cp, _ in mounts]
+    existing_host_by_cp[container_path] = str(host_path)
+    volumes = [f"{existing_host_by_cp[cp]}:{cp}" for cp, _ in mounts]
     if token_host_path and token_host_path.exists():
         volumes.append(f"{token_host_path}:{CONTAINER_TOKEN_PATH}:ro")
+    platform_cli_host = _find_host_platform_cli_repo()
+    if platform_cli_host is not None:
+        volumes.append(f"{platform_cli_host}:{CONTAINER_PLATFORM_CLI_SRC}:ro")
 
     svc["environment"] = {
         "PLATFORM_DEV_MOUNTS": _format_mounts_env(mounts),
@@ -331,8 +391,6 @@ def _run_local_dev(passthrough: List[str]) -> None:
             deps_env["API_TOKEN_GITHUB"] = token
 
     for container_path, packages in _parse_mounts_env(raw_mounts):
-        if not packages:
-            continue
         base = Path(container_path).name
         build_base = f"{CONTAINER_BUILD_BASE}/{base}"
 
@@ -344,25 +402,30 @@ def _run_local_dev(passthrough: List[str]) -> None:
             check=True,
         )
 
-        pkg_args = []
+        pkg_args: List[str] = []
         for p in packages:
             pkg_args += ["--package", p]
-        click.echo(
-            click.style(
-                f"[platform dev] building {','.join(packages)} in {container_path}", fg="cyan"
-            )
-        )
+        label = ",".join(packages) if packages else "all packages"
+        click.echo(click.style(f"[platform dev] building {label} in {container_path}", fg="cyan"))
         subprocess.run(
             ["platform", "ros", "build", *pkg_args, "--", "--build-base", build_base],
             cwd=container_path,
             check=True,
         )
 
-    # Chain: source overlay → cd workdir → exec the passthrough command.
-    # bash -l picks up the image's profile; sourcing the overlay again refreshes symlinks
-    # to the newly-built packages. exec replaces the shell so signals propagate.
+    # Chain: source overlay → cd workdir → spawn a fresh login shell to run the command.
+    # Running the passthrough under a new `bash -l -c` (rather than exec'ing it directly)
+    # means /etc/profile and ~/.profile re-run from scratch, rebuilding AMENT_PREFIX_PATH
+    # and friends against the now-current state of /opt/greenroom/<module>. Without this,
+    # packages symlinked in by colcon during the build step are missed by setup.bash
+    # because their local_setup.bash sourcing happens in the already-partially-initialized
+    # outer shell.
     joined = " ".join(_shquote(arg) for arg in passthrough)
-    shell_cmd = f"source {_shquote(source_path)} && cd {_shquote(workdir)} && exec {joined}"
+    shell_cmd = (
+        f"source {_shquote(source_path)} && "
+        f"cd {_shquote(workdir)} && "
+        f"exec bash -l -c {_shquote(joined)}"
+    )
     os.execvp("bash", ["bash", "-l", "-c", shell_cmd])
 
 
@@ -383,15 +446,14 @@ class Dev(PlatformCliGroup):
             pass
 
         @dev.command(name="mount")
-        @click.argument("product", type=click.Choice(PRODUCT_NAMES))
-        @click.option("--service", required=True, type=str, help="Target container service name")
+        @click.argument("product", type=ProductType())
         @click.option(
-            "--package",
-            "packages",
-            required=True,
-            multiple=True,
-            help="ROS package name(s) to build (repeatable)",
+            "--service",
+            default=None,
+            type=str,
+            help="Target container service name (defaults to the product's primary service)",
         )
+        @click.argument("packages", nargs=-1)
         @click.option(
             "--repo",
             default=".",
@@ -406,13 +468,15 @@ class Dev(PlatformCliGroup):
         )
         def mount(
             product: str,
-            service: str,
+            service: Optional[str],
             packages: Tuple[str, ...],
             repo: str,
             product_repo: Optional[str],
         ):
             """Mount a local repo into a product container for development."""
             product_config = PRODUCTS[product]
+            if service is None:
+                service = product_config["default_service"]
             valid_services = list(product_config["services"].keys())
             if service not in valid_services:
                 raise click.ClickException(
@@ -447,7 +511,7 @@ class Dev(PlatformCliGroup):
             )
 
         @dev.command(name="unmount")
-        @click.argument("product", type=click.Choice(PRODUCT_NAMES))
+        @click.argument("product", type=ProductType())
         @click.option(
             "--product-repo",
             default=None,
@@ -476,7 +540,7 @@ class Dev(PlatformCliGroup):
             )
 
         @dev.command(name="status")
-        @click.argument("product", type=click.Choice(PRODUCT_NAMES))
+        @click.argument("product", type=ProductType())
         @click.option(
             "--product-repo",
             default=None,
@@ -508,7 +572,7 @@ class Dev(PlatformCliGroup):
                 click.echo(click.style(f"{svc_name}:", fg="green", bold=True))
                 for container_path, pkgs in mounts:
                     host = host_by_container.get(container_path, container_path)
-                    click.echo(f"  {host} -> {', '.join(pkgs)}")
+                    click.echo(f"  {host} -> {', '.join(pkgs) if pkgs else '(all packages)'}")
 
         @dev.command(name="_run", hidden=True, context_settings={"ignore_unknown_options": True})
         @click.argument("passthrough", nargs=-1, type=click.UNPROCESSED)
