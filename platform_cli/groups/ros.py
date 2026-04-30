@@ -1,5 +1,5 @@
 from glob import glob
-from typing import List
+from typing import List, Optional
 from pathlib import Path
 import click
 
@@ -68,6 +68,18 @@ class Ros(PlatformCliGroup):
             help="Additional CMake args (e.g. -DFOO=bar)",
         )
         @click.option(
+            "--parallel-workers",
+            type=int,
+            default=None,
+            help="Limit colcon's concurrent package builds (default: one per CPU core)",
+        )
+        @click.option(
+            "--make-jobs",
+            type=int,
+            default=None,
+            help="Limit per-package make parallelism via MAKEFLAGS=-jN (default: unset)",
+        )
+        @click.option(
             "--watch", type=bool, is_flag=True, default=False, help="Should we watch for changes?"
         )
         @click.argument("args", nargs=-1)
@@ -77,6 +89,8 @@ class Ros(PlatformCliGroup):
             no_base: bool,
             deps: bool,
             cmake_arg: List[str],
+            parallel_workers: Optional[int],
+            make_jobs: Optional[int],
             watch: bool,
             args: List[str],
         ):
@@ -98,6 +112,10 @@ class Ros(PlatformCliGroup):
                     env = get_ros_env()
                     args_str += f" --merge-install --symlink-install --install-base /opt/greenroom/{env['PLATFORM_MODULE']}"
 
+                if parallel_workers is not None:
+                    # Must precede --cmake-args, which consumes everything after it.
+                    args_str += f" --parallel-workers {parallel_workers}"
+
                 args_str += " --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
 
                 for arg in cmake_arg:
@@ -106,7 +124,8 @@ class Ros(PlatformCliGroup):
                 if debug_symbols:
                     args_str += " -D CMAKE_BUILD_TYPE=RelWithDebInfo"
 
-                return call(f"colcon build {args_str}")
+                call_env = {"MAKEFLAGS": f"-j{make_jobs}"} if make_jobs is not None else {}
+                return call(f"colcon build {args_str}", env=call_env)
 
             if watch:
                 return start_watcher(command)
