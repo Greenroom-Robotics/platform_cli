@@ -57,7 +57,7 @@ class Ros(PlatformCliGroup):
 
         @ros.command(name="build")
         @click.option("--package", type=str, multiple=True, help="The packages to build")
-        @click.option("--debug-symbols", is_flag=True, show_default=True, default=False)
+        @click.option("--debug-symbols", is_flag=True, show_default=True, default=True)
         @click.option("--no-base", is_flag=True, default=False)
         @click.option("--deps", is_flag=True, default=False)
         @click.option(
