@@ -69,13 +69,13 @@ class Ros(PlatformCliGroup):
         )
         @click.option(
             "--parallel-workers",
-            type=int,
+            type=click.IntRange(min=1),
             default=None,
             help="Limit colcon's concurrent package builds (default: one per CPU core)",
         )
         @click.option(
             "--make-jobs",
-            type=int,
+            type=click.IntRange(min=1),
             default=None,
             help="Limit per-package make parallelism via MAKEFLAGS=-jN (default: unset)",
         )
